@@ -25,10 +25,11 @@ from components.maintenance import render_maintenance
 from components.move_schedule import render_move_schedule
 from config.property_config import get_property_logo_path, get_property_display_name, find_property_by_directory_name
 
-# Page config
+# Page config - Force sidebar to be visible
 st.set_page_config(
     page_title="Real Estate Dashboard",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 def main():
@@ -93,24 +94,34 @@ def main():
         background: #334155 !important;
     }
     
-    /* Sidebar */
-    .stSidebar {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-        border-right: 2px solid #334155;
+    /* Robust sidebar selector for current Streamlit builds */
+    section[data-testid="stSidebar"], aside[data-testid="stSidebar"] {
+        background: #1e293b !important;
+        border-right: 1px solid #4a90e2 !important;
     }
     
-    .stSidebar .stMarkdown {
-        color: #ffffff !important;
+    /* Ensure text doesn't wrap weirdly in sidebar when expanded */
+    .stSidebar .stSelectbox label,
+    .stSidebar .stMarkdown,
+    .stSidebar h1,
+    .stSidebar h2,
+    .stSidebar h3 {
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
-    /* Remove default spacing */
+    /* Main content spacing */
     .main .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
     }
     
+    /* Keep header so the sidebar toggle is visible */
     header[data-testid="stHeader"] {
-        display: none;
+        background: transparent;
+        box-shadow: none;
+        height: 3rem;        /* slim it down instead of hiding */
     }
     
     /* Dashboard Cards - Content outlined, headers plain */
@@ -428,8 +439,17 @@ def main():
     # Load available weeks and properties
     available_data = get_available_weeks_and_properties(DATA_PATH)
     
-    # Render sidebar and get selections
+    # Use the proper render_sidebar function
     selected_week, selected_property = render_sidebar(available_data)
+    
+    # Show in main area
+    st.write(f"**Dashboard for:** {selected_property} | Week: {selected_week}")
+    
+
+    
+
+    
+
     
     # Main content area - show property logo or default title
     if selected_property:
@@ -618,6 +638,7 @@ def main():
             'projection_data': projection_data,
             'file_availability': file_availability
         })
+
 
 if __name__ == "__main__":
     main()

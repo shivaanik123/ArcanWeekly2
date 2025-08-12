@@ -3,6 +3,7 @@ Sidebar component for week and property selection
 """
 
 import streamlit as st
+import os
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
@@ -14,35 +15,23 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         Tuple of (selected_week, selected_property)
     """
     
-    # Display Arcan logo in sidebar
-    st.sidebar.image("/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/arcan-logo.png", use_container_width=True)
+    # Simple sidebar title (like the working test)
+    st.sidebar.title("🏠 ARCAN CLEAN")
     st.sidebar.markdown("---")
     
-    # Week selection
+    # Week selection - simplified
     weeks = available_data.get('weeks', [])
     if not weeks:
         st.sidebar.error("No data weeks found")
         return None, None
     
-    # Convert week strings to readable format for display
-    week_options = {}
-    for week in weeks:
-        try:
-            week_date = datetime.strptime(week, '%m_%d_%Y')
-            readable = week_date.strftime('%B %d, %Y')
-            week_options[readable] = week
-        except ValueError:
-            week_options[week] = week
-    
-    selected_week_readable = st.sidebar.selectbox(
+    selected_week = st.sidebar.selectbox(
         "📅 Select Week",
-        options=list(week_options.keys()),
-        index=len(week_options) - 1 if week_options else 0  # Default to latest week
+        options=weeks,
+        index=len(weeks) - 1 if weeks else 0  # Default to latest week
     )
     
-    selected_week = week_options.get(selected_week_readable) if selected_week_readable else None
-    
-    # Property selection
+    # Property selection - simplified
     properties = available_data.get('properties', [])
     if not properties:
         st.sidebar.error("No properties found")
@@ -54,12 +43,10 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         index=0
     )
     
-    # Show data availability info
+    # Show current selection
     if selected_week and selected_property:
         st.sidebar.markdown("---")
-        st.sidebar.markdown("**Data Selection:**")
-        st.sidebar.markdown(f"📅 Week: {selected_week_readable}")
-        st.sidebar.markdown(f"🏠 Property: {selected_property}")
+        st.sidebar.success(f"**Selected:** {selected_week} - {selected_property}")
     
     return selected_week, selected_property
 
