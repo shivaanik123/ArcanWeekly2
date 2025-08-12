@@ -10,8 +10,10 @@ def render_current_occupancy(box_metrics: Dict[str, float], unit_counts: Dict[st
     """Render the Current Occupancy card with dark blue styling."""
     
     # Prepare data for the table
+    occupied_units = box_metrics.get('occupied_units', 0)
+    total_units = box_metrics.get('total_units', 0)
     occupancy_data = [
-        {"Metric": "Occupied Units", "Value": box_metrics.get('occupied_units', 0)},
+        {"Metric": "Occupied Units", "Value": f"{occupied_units}/{total_units}"},
         {"Metric": "Model/Down Units", "Value": box_metrics.get('model', 0) + box_metrics.get('down', 0)},
         {"Metric": "Vacant Rentable", "Value": unit_counts.get('vacant_rentable', 0)},
         {"Metric": "Leased Vacant", "Value": unit_counts.get('leased_vacant', 0)},
