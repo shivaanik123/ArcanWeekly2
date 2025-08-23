@@ -15,8 +15,12 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         Tuple of (selected_week, selected_property)
     """
     
-    # Simple sidebar title (like the working test)
-    st.sidebar.title("🏠 ARCAN CLEAN")
+    # Arcan Capital logo in sidebar
+    logo_path = "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/arcan-logo.png"
+    if os.path.exists(logo_path):
+        st.sidebar.image(logo_path, use_container_width=True)
+    else:
+        st.sidebar.title("🏠 ARCAN CAPITAL")
     st.sidebar.markdown("---")
     
     # Week selection - simplified
@@ -26,7 +30,7 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         return None, None
     
     selected_week = st.sidebar.selectbox(
-        "📅 Select Week",
+        "Select Week",
         options=weeks,
         index=len(weeks) - 1 if weeks else 0  # Default to latest week
     )
@@ -38,7 +42,7 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         return selected_week, None
     
     selected_property = st.sidebar.selectbox(
-        "🏠 Select Property",
+        "Select Property",
         options=properties,
         index=0
     )
@@ -50,23 +54,4 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
     
     return selected_week, selected_property
 
-def show_data_availability(file_availability: Dict[str, bool]):
-    """Show which data files are available in the sidebar."""
-    
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**Available Data:**")
-    
-    file_labels = {
-        'resanalytics_box_score': '📊 Box Score',
-        'work_order_report': '🔧 Work Orders',
-        'resanalytics_unit_availability': '🏠 Unit Availability',
-        'pending_make_ready': '🔨 Make Ready',
-        'resaranalytics_delinquency': '💰 Delinquency'
-    }
-    
-    for file_type, available in file_availability.items():
-        label = file_labels.get(file_type, file_type)
-        if available:
-            st.sidebar.markdown(f"✅ {label}")
-        else:
-            st.sidebar.markdown(f"❌ {label}")
+

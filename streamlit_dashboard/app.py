@@ -17,12 +17,13 @@ from utils.calculations import (
     calculate_projection, calculate_net_to_rent, calculate_collections_rate,
     get_traffic_metrics, get_residents_on_notice_metrics, calculate_notice_units
 )
-from components.sidebar import render_sidebar, show_data_availability
+from components.sidebar import render_sidebar
 from components.kpi_cards import render_kpi_cards
 from components.current_occupancy import render_current_occupancy
 from components.projections import render_projections_applications
 from components.maintenance import render_maintenance
 from components.move_schedule import render_move_schedule
+from components.graphs import render_graphs_section
 from config.property_config import get_property_logo_path, get_property_display_name, find_property_by_directory_name
 
 # Page config - Force sidebar to be visible
@@ -442,12 +443,6 @@ def main():
     # Use the proper render_sidebar function
     selected_week, selected_property = render_sidebar(available_data)
     
-    # Show in main area
-    st.write(f"**Dashboard for:** {selected_property} | Week: {selected_week}")
-    
-
-    
-
     
 
     
@@ -494,8 +489,7 @@ def main():
         'residents_on_notice': 'residents_on_notice' in raw_data
     }
     
-    # Show data availability in sidebar
-    show_data_availability(file_availability)
+
     
     # Calculate metrics
     box_metrics = {}
@@ -628,6 +622,84 @@ def main():
         current_occupied = box_metrics.get('occupied_units', 0)
         total_property_units = box_metrics.get('total_units', 0)
         render_move_schedule(unit_availability_data, total_property_units, current_occupied)
+    
+    # 3. Historical Analytics & Graphs Section
+    # Try to load comprehensive report data for historical analysis
+    comprehensive_historical_data = None
+    debug_info = []
+    
+    try:
+        debug_info.append(f"Selected property: '{selected_property}'")
+        
+        from parsers.comprehensive_historical_parser import ComprehensiveHistoricalParser
+        
+        # Look for comprehensive report for this property
+        reports_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports"
+        parser = ComprehensiveHistoricalParser(reports_path)
+        property_reports = parser.discover_property_reports()
+        
+        debug_info.append(f"Found {len(property_reports)} comprehensive reports")
+        debug_info.append(f"Available reports: {list(property_reports.keys())}")
+        
+        # Find matching comprehensive report
+        matching_report = None
+        for prop_name, file_path in property_reports.items():
+            if selected_property and selected_property.lower().strip() in prop_name.lower():
+                matching_report = file_path
+                debug_info.append(f"✅ Found matching report: '{prop_name}' -> {file_path}")
+                break
+        
+        if matching_report:
+            debug_info.append(f"Attempting to parse: {matching_report}")
+            
+            # Use comprehensive parser directly instead of file_parser
+            from parsers.comprehensive_internal_parser import parse_comprehensive_internal_report
+            comprehensive_data = parse_comprehensive_internal_report(matching_report)
+            
+            debug_info.append(f"Parse result keys: {list(comprehensive_data.keys()) if isinstance(comprehensive_data, dict) else 'Not a dict'}")
+            
+            if 'error' in comprehensive_data:
+                debug_info.append(f"❌ Parse error: {comprehensive_data['error']}")
+            elif 'historical_data' in comprehensive_data:
+                comprehensive_historical_data = comprehensive_data['historical_data']
+                debug_info.append(f"✅ Historical data loaded successfully")
+                if 'weekly_occupancy_data' in comprehensive_historical_data:
+                    debug_info.append(f"✅ Found {len(comprehensive_historical_data['weekly_occupancy_data'])} weeks of data")
+                else:
+                    debug_info.append("❌ No 'weekly_occupancy_data' in historical_data")
+                    debug_info.append(f"Historical data keys: {list(comprehensive_historical_data.keys())}")
+            else:
+                debug_info.append("❌ No 'historical_data' key in parsed data")
+        else:
+            debug_info.append(f"❌ No matching comprehensive report found for '{selected_property}'")
+                
+    except Exception as e:
+        debug_info.append(f"❌ Exception: {str(e)}")
+        import traceback
+        debug_info.append(f"❌ Traceback: {traceback.format_exc()}")
+    
+    # Show debug info in an expander
+    with st.expander("🔍 Debug: Historical Data Loading"):
+        for info in debug_info:
+            st.write(info)
+    
+    # Render graphs section
+    # Get the full comprehensive data (not just historical_data)
+    full_comprehensive_data = None
+    if matching_report:
+        try:
+            from parsers.comprehensive_internal_parser import parse_comprehensive_internal_report
+            full_comprehensive_data = parse_comprehensive_internal_report(matching_report)
+            debug_info.append(f"✅ Full comprehensive data loaded for graphs")
+            if 'historical_data' in full_comprehensive_data and 'rent_data' in full_comprehensive_data['historical_data']:
+                rent_count = len(full_comprehensive_data['historical_data']['rent_data'])
+                debug_info.append(f"✅ Rent data available: {rent_count} months")
+            else:
+                debug_info.append(f"❌ No rent data in full comprehensive data")
+        except Exception as e:
+            debug_info.append(f"❌ Error loading full comprehensive data: {str(e)}")
+    
+    render_graphs_section(comprehensive_historical_data, selected_property, full_comprehensive_data)
     
     # Show raw data in expander for debugging
     with st.expander("🔍 Debug: View Raw Data"):

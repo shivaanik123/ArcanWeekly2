@@ -34,9 +34,23 @@ def render_kpi_cards(metrics: Dict[str, Any]):
     
     .trading-kpi-card-status-good {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-        border: 1px solid #4a90e2 !important;
+        border: 2px solid #22c55e !important;
         color: white !important;
-        box-shadow: 0 0 12px rgba(74, 144, 226, 0.2) !important;
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.1) !important;
+    }
+    
+    .trading-kpi-card-status-watch {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+        border: 2px solid #eab308 !important;
+        color: white !important;
+        box-shadow: 0 0 15px rgba(234, 179, 8, 0.5), inset 0 0 20px rgba(234, 179, 8, 0.1) !important;
+    }
+    
+    .trading-kpi-card-status-alert {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+        border: 2px solid #ef4444 !important;
+        color: white !important;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.1) !important;
     }
     
     .trading-kpi-card-dark {
@@ -98,9 +112,19 @@ def render_kpi_cards(metrics: Dict[str, Any]):
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        # Status card
-        status_class = "trading-kpi-card-status-good" if status == 'GOOD' else "trading-kpi-card"
-        status_subtitle = "declining" if status == 'GOOD' else "monitor"
+        # Status card - determine color based on status
+        if status.upper() == 'GOOD':
+            status_class = "trading-kpi-card-status-good"
+            status_subtitle = "performing well"
+        elif status.upper() in ['WATCH', 'MONITOR']:
+            status_class = "trading-kpi-card-status-watch"
+            status_subtitle = "needs attention"
+        elif status.upper() in ['ALERT', 'BAD', 'CRITICAL']:
+            status_class = "trading-kpi-card-status-alert"
+            status_subtitle = "immediate action"
+        else:
+            status_class = "trading-kpi-card"
+            status_subtitle = "monitor"
         
         st.markdown(f"""
         <div class="trading-kpi-card {status_class}">

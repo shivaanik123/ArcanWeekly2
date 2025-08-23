@@ -131,7 +131,7 @@ def parse_occupancy_sheet(file_path: str) -> Dict[str, Any]:
 
 
 def parse_financial_sheet(file_path: str) -> Dict[str, Any]:
-    """Parse the Financial sheet for financial trends."""
+    """Parse the Financial sheet for financial trends including rent data."""
     
     result = {
         'current_week': {},
@@ -141,10 +141,47 @@ def parse_financial_sheet(file_path: str) -> Dict[str, Any]:
     try:
         df = pd.read_excel(file_path, sheet_name='Financial', header=None)
         
-        # Look for financial data patterns
-        # This would need more analysis to identify the structure
-        result['current_week']['financial_data'] = "Financial data parsing to be implemented"
-        result['historical']['financial_trends'] = []
+        # Extract historical rent data starting from row 2
+        historical_rent_data = []
+        
+        for i in range(2, len(df)):
+            try:
+                # Check if we have a valid date in column 12
+                date_cell = df.iloc[i, 12] if df.shape[1] > 12 else None
+                if pd.notna(date_cell) and hasattr(date_cell, 'year'):
+                    # Extract rent data from columns 13 and 14
+                    market_rent = df.iloc[i, 13] if df.shape[1] > 13 and not pd.isna(df.iloc[i, 13]) else 0
+                    occupied_rent = df.iloc[i, 14] if df.shape[1] > 14 and not pd.isna(df.iloc[i, 14]) else 0
+                    
+                    # Convert to float if they're strings
+                    try:
+                        market_rent = float(str(market_rent).replace(',', '').replace('$', ''))
+                    except (ValueError, TypeError):
+                        market_rent = 0
+                        
+                    try:
+                        occupied_rent = float(str(occupied_rent).replace(',', '').replace('$', ''))
+                    except (ValueError, TypeError):
+                        occupied_rent = 0
+                    
+                    rent_data = {
+                        'date': date_cell,
+                        'market_rent': market_rent,
+                        'occupied_rent': occupied_rent
+                    }
+                    
+                    historical_rent_data.append(rent_data)
+                    
+            except Exception as e:
+                continue  # Skip problematic rows
+        
+        result['historical']['rent_data'] = historical_rent_data
+        
+        # Set current week data to the most recent rent data if available
+        if historical_rent_data:
+            latest_rent = historical_rent_data[-1]
+            result['current_week']['market_rent'] = latest_rent['market_rent']
+            result['current_week']['occupied_rent'] = latest_rent['occupied_rent']
         
     except Exception as e:
         print(f"Warning: Could not parse financial sheet: {e}")

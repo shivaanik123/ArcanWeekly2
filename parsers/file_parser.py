@@ -19,6 +19,7 @@ try:
     from .pending_make_parser import parse_pending_make_ready, identify_pending_make_file
     from .resaranalytics_delinquency_parser import parse_resaranalytics_delinquency, identify_resaranalytics_delinquency_file
     from .residents_on_notice_parser import parse_residents_on_notice, identify_residents_on_notice_file
+    from .comprehensive_internal_parser import parse_comprehensive_internal_report, identify_comprehensive_internal_file
 except ImportError:
     # For running as main script
     from resanalytics_box_parser import parse_resanalytics_box_score, identify_resanalytics_box_file
@@ -30,6 +31,7 @@ except ImportError:
     from pending_make_parser import parse_pending_make_ready, identify_pending_make_file
     from resaranalytics_delinquency_parser import parse_resaranalytics_delinquency, identify_resaranalytics_delinquency_file
     from residents_on_notice_parser import parse_residents_on_notice, identify_residents_on_notice_file
+    from comprehensive_internal_parser import parse_comprehensive_internal_report, identify_comprehensive_internal_file
 
 
 # File type patterns and their corresponding parsers
@@ -87,6 +89,12 @@ FILE_PATTERNS = [
         'identifier': identify_residents_on_notice_file,
         'parser': parse_residents_on_notice,
         'description': 'Residents on Notice Report'
+    },
+    {
+        'pattern': 'comprehensive_internal',
+        'identifier': identify_comprehensive_internal_file,
+        'parser': parse_comprehensive_internal_report,
+        'description': 'Comprehensive Internal Weekly Report (Historical Data)'
     }
 ]
 
