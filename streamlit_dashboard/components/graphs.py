@@ -75,8 +75,19 @@ def render_graphs_section(historical_data: Dict[str, Any], property_name: str = 
         render_collections_chart(comprehensive_data, property_name)
     
     with col6:
-        st.markdown("### Maintenance Analytics")
-        render_interactive_maintenance_chart(comprehensive_data, property_name)
+        # Title with inline dropdown selector
+        title_col, dropdown_col = st.columns([2, 1])
+        with title_col:
+            st.markdown("### Maintenance Analytics")
+        with dropdown_col:
+            time_period = st.selectbox(
+                "Period:",
+                options=["3 Months", "6 Months", "12 Months"],
+                index=0,
+                key="maintenance_time_period_header",
+                label_visibility="collapsed"
+            )
+        render_interactive_maintenance_chart(comprehensive_data, property_name, time_period)
 
 
 def render_occupancy_trends(df: pd.DataFrame, property_name: str):
@@ -1083,12 +1094,13 @@ def render_collections_chart(comprehensive_data: Dict[str, Any], property_name: 
         hovertemplate='<b>Collections Rate</b><br>Date: %{x}<br>Rate: %{y:.2f}%<extra></extra>'
     ))
     
-    # Update layout for dark theme
+    # Update layout for dark theme (with explicit margins for alignment)
     fig.update_layout(
         height=400,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='white'),
+        margin=dict(l=100, r=20, t=20, b=60, autoexpand=False),  # Fixed margins, no auto-expansion
         xaxis=dict(
             gridcolor='rgba(74, 144, 226, 0.2)',
             color='white',
@@ -1250,7 +1262,7 @@ def render_interactive_maintenance_chart(comprehensive_data: Dict[str, Any], pro
     with col4:
         total_make_ready = filtered_df['make_readies_count'].sum()
         st.metric("Total Make Ready", f"{int(total_make_ready)}")
-def render_interactive_maintenance_chart(comprehensive_data: Dict[str, Any], property_name: str):
+def render_interactive_maintenance_chart(comprehensive_data: Dict[str, Any], property_name: str, time_period: str = "3 Months"):
     """Render interactive maintenance analytics with time period selection."""
     
     # Get historical data from the parsed comprehensive reports
@@ -1279,17 +1291,6 @@ def render_interactive_maintenance_chart(comprehensive_data: Dict[str, Any], pro
     if df.empty:
         st.warning("No valid maintenance data found.")
         return
-    
-    # Time period selection at the top (legend-style)
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-    
-    with col4:  # Position in top-right like a legend
-        time_period = st.selectbox(
-            "Time Period:",
-            options=["3 Months", "6 Months", "12 Months"],
-            index=0,  # Default to 3 months
-            label_visibility="collapsed"  # Hide the label for cleaner look
-        )
     
     # Filter data based on selected time period
     end_date = df['date'].max()
@@ -1333,13 +1334,13 @@ def render_interactive_maintenance_chart(comprehensive_data: Dict[str, Any], pro
         hovertemplate='<b>Make Ready Units</b><br>Date: %{x}<br>Count: %{y}<extra></extra>'
     ))
     
-    # Update layout
+    # Update layout (matching collections chart exactly including margins)
     fig.update_layout(
-        height=400,  # Match other charts
+        height=400,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='white'),
-        barmode='group',  # Group bars side by side
+        margin=dict(l=100, r=20, t=20, b=60, autoexpand=False),  # Fixed margins, no auto-expansion
         xaxis=dict(
             gridcolor='rgba(74, 144, 226, 0.2)',
             color='white',
@@ -1350,7 +1351,7 @@ def render_interactive_maintenance_chart(comprehensive_data: Dict[str, Any], pro
         yaxis=dict(
             gridcolor='rgba(74, 144, 226, 0.2)',
             color='white',
-            title="Count",
+            title="Maintenance Count",
             title_font=dict(size=14),
             tickfont=dict(size=12)
         ),
