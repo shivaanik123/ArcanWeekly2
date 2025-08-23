@@ -51,7 +51,22 @@ def parse_comprehensive_internal_report(file_path: str) -> Dict[str, Any]:
 def parse_occupancy_sheet(file_path: str) -> Dict[str, Any]:
     """Parse the Occupancy sheet for current and historical data."""
     
-    df = pd.read_excel(file_path, sheet_name='Occupancy', header=None)
+    # Try different possible sheet names for occupancy data
+    xl_file = pd.ExcelFile(file_path)
+    occupancy_sheet_name = None
+    
+    # Check for common occupancy sheet names
+    possible_names = ['Occupancy', 'Occ', 'Occupancy Data']
+    for name in possible_names:
+        if name in xl_file.sheet_names:
+            occupancy_sheet_name = name
+            break
+    
+    if not occupancy_sheet_name:
+        print(f"No occupancy sheet found in {xl_file.sheet_names}")
+        return {'metadata': {}, 'current_week': {}, 'historical': {}}
+        
+    df = pd.read_excel(file_path, sheet_name=occupancy_sheet_name, header=None)
     
     result = {
         'metadata': {},
@@ -139,42 +154,144 @@ def parse_financial_sheet(file_path: str) -> Dict[str, Any]:
     }
     
     try:
-        df = pd.read_excel(file_path, sheet_name='Financial', header=None)
+        # Try different possible sheet names for financial data
+        xl_file = pd.ExcelFile(file_path)
+        financial_sheet_name = None
         
-        # Extract historical rent data starting from row 2
+        # Check for common financial sheet names
+        possible_names = ['Financial', 'Fin', 'Finance']
+        for name in possible_names:
+            if name in xl_file.sheet_names:
+                financial_sheet_name = name
+                break
+        
+        if not financial_sheet_name:
+            print(f"No financial sheet found in {xl_file.sheet_names}")
+            return result
+            
+        df = pd.read_excel(file_path, sheet_name=financial_sheet_name, header=None)
+        
+        # Check which format this report uses and extract historical data accordingly
         historical_rent_data = []
         
-        for i in range(2, len(df)):
-            try:
-                # Check if we have a valid date in column 12
+        # Check if this is Marbella format by looking for dates in column 12
+        has_date_column = False
+        if df.shape[1] > 12:
+            for i in range(2, min(10, len(df))):  # Check first few rows
                 date_cell = df.iloc[i, 12] if df.shape[1] > 12 else None
                 if pd.notna(date_cell) and hasattr(date_cell, 'year'):
-                    # Extract rent data from columns 13 and 14
-                    market_rent = df.iloc[i, 13] if df.shape[1] > 13 and not pd.isna(df.iloc[i, 13]) else 0
-                    occupied_rent = df.iloc[i, 14] if df.shape[1] > 14 and not pd.isna(df.iloc[i, 14]) else 0
-                    
-                    # Convert to float if they're strings
-                    try:
-                        market_rent = float(str(market_rent).replace(',', '').replace('$', ''))
-                    except (ValueError, TypeError):
-                        market_rent = 0
-                        
-                    try:
-                        occupied_rent = float(str(occupied_rent).replace(',', '').replace('$', ''))
-                    except (ValueError, TypeError):
-                        occupied_rent = 0
-                    
-                    rent_data = {
-                        'date': date_cell,
-                        'market_rent': market_rent,
-                        'occupied_rent': occupied_rent
-                    }
-                    
-                    historical_rent_data.append(rent_data)
-                    
-            except Exception as e:
-                continue  # Skip problematic rows
+                    has_date_column = True
+                    break
         
+        # Format 1: Marbella-style with dates in column 12 (time-series data)
+        if has_date_column:
+            for i in range(2, len(df)):
+                try:
+                    # Check if we have a valid date in column 12
+                    date_cell = df.iloc[i, 12] if df.shape[1] > 12 else None
+                    if pd.notna(date_cell) and hasattr(date_cell, 'year'):
+                        # Extract rent data from columns 13 and 14
+                        market_rent = df.iloc[i, 13] if df.shape[1] > 13 and not pd.isna(df.iloc[i, 13]) else 0
+                        occupied_rent = df.iloc[i, 14] if df.shape[1] > 14 and not pd.isna(df.iloc[i, 14]) else 0
+                        revenue = df.iloc[i, 15] if df.shape[1] > 15 and not pd.isna(df.iloc[i, 15]) else 0
+                        expenses = df.iloc[i, 16] if df.shape[1] > 16 and not pd.isna(df.iloc[i, 16]) else 0
+                        collections = df.iloc[i, 19] if df.shape[1] > 19 and not pd.isna(df.iloc[i, 19]) else 0
+                        
+                        # Convert to float if they're strings
+                        try:
+                            market_rent = float(str(market_rent).replace(',', '').replace('$', ''))
+                        except (ValueError, TypeError):
+                            market_rent = 0
+                            
+                        try:
+                            occupied_rent = float(str(occupied_rent).replace(',', '').replace('$', ''))
+                        except (ValueError, TypeError):
+                            occupied_rent = 0
+                        
+                        rent_data = {
+                            'date': date_cell,
+                            'market_rent': market_rent,
+                            'occupied_rent': occupied_rent,
+                            'revenue': float(revenue) if revenue != 0 else 0,
+                            'expenses': float(expenses) if expenses != 0 else 0,
+                            'collections': float(collections) if collections != 0 else 0
+                        }
+                        
+                        historical_rent_data.append(rent_data)
+                        
+                except Exception as e:
+                    continue  # Skip problematic rows
+        
+        # Format 2: 55 PHARR-style with monthly columns (limited historical data)
+        else:
+            try:
+                from datetime import datetime
+                current_year = datetime.now().year
+                
+                # Check for month headers in row 4
+                month_cols = []
+                for col in range(df.shape[1]):
+                    cell_val = df.iloc[4, col] if len(df) > 4 else None
+                    if pd.notna(cell_val) and str(cell_val).upper() in ['JUNE', 'MAY', 'APRIL', 'MARCH', 'FEBRUARY', 'JANUARY']:
+                        month_name = str(cell_val).upper()
+                        month_mapping = {'JANUARY': 1, 'FEBRUARY': 2, 'MARCH': 3, 'APRIL': 4, 'MAY': 5, 'JUNE': 6}
+                        if month_name in month_mapping:
+                            month_num = month_mapping[month_name]
+                            month_cols.append((col, month_num, month_name))
+                
+                # Extract revenue and expense data for each month
+                for col, month_num, month_name in month_cols:
+                    try:
+                        revenue = 0
+                        expenses = 0
+                        
+                        # Look for TOTAL INCOME and calculate total expenses
+                        for row in range(len(df)):
+                            cell_val = df.iloc[row, 1] if df.shape[1] > 1 else None
+                            if pd.notna(cell_val):
+                                cell_str = str(cell_val).upper()
+                                if 'TOTAL INCOME' in cell_str:
+                                    revenue_val = df.iloc[row, col] if df.shape[1] > col else None
+                                    if pd.notna(revenue_val):
+                                        try:
+                                            revenue = float(str(revenue_val).replace(',', ''))
+                                        except (ValueError, TypeError):
+                                            revenue = 0
+                        
+                        # Calculate total expenses by summing expense categories
+                        expense_categories = ['PAYROLL', 'MANAGEMENT FEE', 'GENERAL', 'REPAIRS', 'MAKE READY']
+                        for row in range(len(df)):
+                            cell_val = df.iloc[row, 1] if df.shape[1] > 1 else None
+                            if pd.notna(cell_val):
+                                cell_str = str(cell_val).upper()
+                                for category in expense_categories:
+                                    if category in cell_str:
+                                        expense_val = df.iloc[row, col] if df.shape[1] > col else None
+                                        if pd.notna(expense_val):
+                                            try:
+                                                expenses += float(str(expense_val).replace(',', ''))
+                                            except (ValueError, TypeError):
+                                                pass
+                        
+                        if revenue > 0 or expenses > 0:
+                            historical_rent_data.append({
+                                'date': datetime(current_year, month_num, 1),
+                                'market_rent': 0,  # Not available in this format
+                                'occupied_rent': 0,  # Not available in this format
+                                'revenue': revenue,
+                                'expenses': expenses,
+                                'collections': 0  # Not available in this format
+                            })
+                    except Exception as e:
+                        continue
+                        
+            except Exception as e:
+                print(f"Error parsing 55 PHARR format: {e}")
+        
+        # Store historical data
+        result['historical']['financial_trends'] = {
+            'rent_data': historical_rent_data
+        }
         result['historical']['rent_data'] = historical_rent_data
         
         # Set current week data to the most recent rent data if available

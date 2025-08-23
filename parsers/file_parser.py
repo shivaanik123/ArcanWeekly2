@@ -20,6 +20,7 @@ try:
     from .resaranalytics_delinquency_parser import parse_resaranalytics_delinquency, identify_resaranalytics_delinquency_file
     from .residents_on_notice_parser import parse_residents_on_notice, identify_residents_on_notice_file
     from .comprehensive_internal_parser import parse_comprehensive_internal_report, identify_comprehensive_internal_file
+    from .comprehensive_6sheet_parser import parse_comprehensive_6sheet_report, identify_comprehensive_6sheet_file
 except ImportError:
     # For running as main script
     from resanalytics_box_parser import parse_resanalytics_box_score, identify_resanalytics_box_file
@@ -32,6 +33,7 @@ except ImportError:
     from resaranalytics_delinquency_parser import parse_resaranalytics_delinquency, identify_resaranalytics_delinquency_file
     from residents_on_notice_parser import parse_residents_on_notice, identify_residents_on_notice_file
     from comprehensive_internal_parser import parse_comprehensive_internal_report, identify_comprehensive_internal_file
+    from comprehensive_6sheet_parser import parse_comprehensive_6sheet_report, identify_comprehensive_6sheet_file
 
 
 # File type patterns and their corresponding parsers
@@ -91,6 +93,12 @@ FILE_PATTERNS = [
         'description': 'Residents on Notice Report'
     },
     {
+        'pattern': 'comprehensive_6sheet',
+        'identifier': identify_comprehensive_6sheet_file,
+        'parser': parse_comprehensive_6sheet_report,
+        'description': 'Comprehensive 6-Sheet Weekly Report (55 PHARR format)'
+    },
+    {
         'pattern': 'comprehensive_internal',
         'identifier': identify_comprehensive_internal_file,
         'parser': parse_comprehensive_internal_report,
@@ -99,18 +107,18 @@ FILE_PATTERNS = [
 ]
 
 
-def identify_file_type(filename: str) -> Optional[Dict[str, Any]]:
+def identify_file_type(file_path: str) -> Optional[Dict[str, Any]]:
     """
-    Identify the file type based on filename patterns.
+    Identify the file type based on file path and patterns.
     
     Args:
-        filename: Name of the file to identify
+        file_path: Path to the file to identify
         
     Returns:
         Dictionary with pattern info if identified, None otherwise
     """
     for pattern_info in FILE_PATTERNS:
-        if pattern_info['identifier'](filename):
+        if pattern_info['identifier'](file_path):
             return pattern_info
     
     return None
@@ -132,7 +140,7 @@ def parse_file(file_path: str) -> Dict[str, Any]:
     filename = os.path.basename(file_path)
     
     # Identify file type
-    pattern_info = identify_file_type(filename)
+    pattern_info = identify_file_type(file_path)
     
     if pattern_info is None:
         return {

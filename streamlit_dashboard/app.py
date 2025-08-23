@@ -472,9 +472,11 @@ def main():
     with st.spinner("Loading data..."):
         data = load_property_data(DATA_PATH, selected_week, selected_property)
     
+    # If weekly data is missing, continue with empty data (graphs will still work with comprehensive reports)
     if 'error' in data:
-        st.error(data['error'])
-        return
+        st.warning(f"Weekly data not available: {data['error']}")
+        st.info("📊 Showing historical analytics from comprehensive reports only")
+        data = {'raw_data': {}}  # Empty data, but continue to show graphs
     
 
     
@@ -703,6 +705,10 @@ def main():
     
     # Show raw data in expander for debugging
     with st.expander("🔍 Debug: View Raw Data"):
+        st.write("**Historical Data Loading Debug:**")
+        for info in debug_info:
+            st.write(f"- {info}")
+        st.write("**Raw Data:**")
         st.json({
             'box_metrics': box_metrics,
             'unit_counts': unit_counts,
