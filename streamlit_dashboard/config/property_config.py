@@ -6,7 +6,7 @@ Maps property names to their codes/acronyms and logo files
 import os
 
 # Base path for apartment logos
-LOGOS_BASE_PATH = "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/Apartment Logos"
+LOGOS_BASE_PATH = "/Users/jsai23/Workspace/Arcan/streamlit_dashboard/logos/Apartment Logos"
 
 # Property mapping with display names, codes, and logo filenames
 PROPERTY_MAPPING = {

@@ -185,7 +185,7 @@ def render_lease_expirations_chart(df: pd.DataFrame, property_name: str):
     """Render lease expirations bar chart with gradient blue design using real data."""
     
     # Load actual lease expiration data
-    lease_file_path = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /ResAnalytic_Lease_Expiration_marbla.xlsx"
+    lease_file_path = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /ResAnalytic_Lease_Expiration_marbla.xlsx"
     
     months = []
     expirations = []
@@ -194,7 +194,7 @@ def render_lease_expirations_chart(df: pd.DataFrame, property_name: str):
         # Import the lease parser
         import os
         import sys
-        sys.path.append('/Users/shivaanikomanduri/ArcanClean')
+        sys.path.append('/Users/jsai23/Workspace/Arcan')
         from parsers.resanalytic_lease_parser import parse_resanalytic_lease_expiration
         
         # Parse the lease expiration file
@@ -315,7 +315,7 @@ def render_rent_trends_chart(comprehensive_data: Dict[str, Any], property_name: 
     import pandas as pd
     import os
     
-    file_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
+    file_path = "/Users/jsai23/Workspace/Arcan/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
     
     if not os.path.exists(file_path):
         st.warning("📈 Comprehensive report file not found.")
@@ -913,7 +913,7 @@ def render_revenue_expenses_chart(comprehensive_data: Dict[str, Any], property_n
     import pandas as pd
     import os
     
-    file_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
+    file_path = "/Users/jsai23/Workspace/Arcan/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
     
     if not os.path.exists(file_path):
         st.warning("Comprehensive report file not found.")
@@ -1030,7 +1030,7 @@ def render_collections_chart(comprehensive_data: Dict[str, Any], property_name: 
     import pandas as pd
     import os
     
-    file_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
+    file_path = "/Users/jsai23/Workspace/Arcan/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
     
     if not os.path.exists(file_path):
         st.warning("Comprehensive report file not found.")

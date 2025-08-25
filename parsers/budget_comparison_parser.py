@@ -128,7 +128,7 @@ def identify_budget_comparison_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /Budget_Comparison(with_PTD)_marbla_Accrual^AJEs^Modified Accrual.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /Budget_Comparison(with_PTD)_marbla_Accrual^AJEs^Modified Accrual.xlsx"
     result = parse_budget_comparison(test_file)
     print("Metadata:", result['metadata'])
     print("Budget data shape:", result['budget_data'].shape)

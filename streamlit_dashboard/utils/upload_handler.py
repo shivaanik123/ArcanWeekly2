@@ -32,7 +32,7 @@ def process_etl_uploads(uploaded_files: List, property_name: str, week: str) -> 
     }
     
     # Create upload directory structure
-    base_path = "/Users/shivaanikomanduri/ArcanClean/data"
+    base_path = "/Users/jsai23/Workspace/Arcan/data"
     week_path = os.path.join(base_path, week)
     property_path = os.path.join(week_path, property_name)
     
@@ -152,7 +152,7 @@ def cleanup_old_backups(days_old: int = 30) -> int:
     Returns:
         Number of files cleaned up
     """
-    base_path = "/Users/shivaanikomanduri/ArcanClean/data"
+    base_path = "/Users/jsai23/Workspace/Arcan/data/"
     cleaned_count = 0
     
     try:

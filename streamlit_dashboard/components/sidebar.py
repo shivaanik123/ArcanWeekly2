@@ -17,7 +17,7 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
     """
     
     # Arcan Capital logo in sidebar
-    logo_path = "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/arcan-logo.png"
+    logo_path = "/Users/jsai23/Workspace/Arcan/streamlit_dashboard/logos/arcan-logo.png"
     if os.path.exists(logo_path):
         st.sidebar.image(logo_path, use_container_width=True)
     else:

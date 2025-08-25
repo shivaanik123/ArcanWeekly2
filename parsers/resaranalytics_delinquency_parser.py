@@ -139,7 +139,7 @@ def identify_resaranalytics_delinquency_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /ResARAnalytics_Delinquency_Summary_marbla.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /ResARAnalytics_Delinquency_Summary_marbla.xlsx"
     result = parse_resaranalytics_delinquency(test_file)
     print("Metadata:", result['metadata'])
     print("Delinquency data shape:", result['delinquency_data'].shape)

@@ -101,7 +101,7 @@ def identify_resanalytic_lease_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /ResAnalytic_Lease_Expiration_marbla.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /ResAnalytic_Lease_Expiration_marbla.xlsx"
     result = parse_resanalytic_lease_expiration(test_file)
     print("Metadata:", result['metadata'])
     print("Lease expiration data shape:", result['lease_expiration_data'].shape)
