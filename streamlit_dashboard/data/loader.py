@@ -51,6 +51,7 @@ def load_property_data(data_base_path: str, week: str, property_name: str) -> Di
     """Load all data files for a specific week and property."""
     # First try the exact property name
     property_path = os.path.join(data_base_path, week, property_name)
+    print(f"Property path: {property_path}")
     
     # If that doesn't exist, try with trailing space (common issue)
     if not os.path.exists(property_path):

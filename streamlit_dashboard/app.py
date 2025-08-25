@@ -435,7 +435,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # Data path (adjust as needed)
-    DATA_PATH = "/Users/shivaanikomanduri/ArcanClean/data"
+    DATA_PATH = "/Users/jsai23/Workspace/Arcan/data"
     
     # Load available weeks and properties
     available_data = get_available_weeks_and_properties(DATA_PATH)
@@ -636,7 +636,7 @@ def main():
         from parsers.comprehensive_historical_parser import ComprehensiveHistoricalParser
         
         # Look for comprehensive report for this property
-        reports_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports"
+        reports_path = "/Users/jsai23/Workspace/Arcan/data/Comprehensive Reports"
         parser = ComprehensiveHistoricalParser(reports_path)
         property_reports = parser.discover_property_reports()
         

@@ -328,7 +328,7 @@ def identify_comprehensive_internal_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/Comprehensive Reports/Comprehensive Reports/Marbella Weekly Report.xlsx"
     
     result = parse_comprehensive_internal_report(test_file)
     

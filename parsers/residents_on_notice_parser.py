@@ -143,7 +143,7 @@ def identify_residents_on_notice_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /Residents_on_Notice_marbla.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /Residents_on_Notice_marbla.xlsx"
     
     try:
         result = parse_residents_on_notice(test_file)

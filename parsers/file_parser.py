@@ -256,7 +256,7 @@ def get_supported_patterns() -> List[Dict[str, str]]:
 
 if __name__ == "__main__":
     # Test the dispatcher with sample data
-    test_dir = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella "
+    test_dir = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella "
     
     print("Supported file patterns:")
     for pattern in get_supported_patterns():

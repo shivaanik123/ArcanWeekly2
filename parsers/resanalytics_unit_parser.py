@@ -141,7 +141,7 @@ def identify_resanalytics_unit_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /ResAnalytics_Unit_Availability_Details_marbla.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /ResAnalytics_Unit_Availability_Details_marbla.xlsx"
     result = parse_resanalytics_unit_availability(test_file)
     print("Metadata:", result['metadata'])
     print("Data sections:", list(result['data_sections'].keys()))

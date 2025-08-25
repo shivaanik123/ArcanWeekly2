@@ -101,7 +101,7 @@ def identify_work_order_file(filename: str) -> bool:
 
 if __name__ == "__main__":
     # Test the parser
-    test_file = "/Users/shivaanikomanduri/ArcanClean/data/08_04_2025/Marbella /Work_Order_Report_marbla.xlsx"
+    test_file = "/Users/jsai23/Workspace/Arcan/data/08_04_2025/Marbella /Work_Order_Report_marbla.xlsx"
     result = parse_work_order_report(test_file)
     print("Metadata:", result['metadata'])
     print("Work orders shape:", result['work_orders'].shape)

@@ -354,7 +354,7 @@ def parse_comprehensive_reports_directory(reports_path: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Test the comprehensive historical parser
-    reports_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports"
+    reports_path = "/Users/jsai23/Workspace/Arcan/data/Comprehensive Reports"
     
     print("=== COMPREHENSIVE HISTORICAL PARSER TEST ===")
     
