@@ -6,7 +6,7 @@ import streamlit as st
 import os
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
-from utils.upload_handler import process_etl_uploads
+from utils.upload_handler import render_upload_interface
 
 def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str], Optional[str]]:
     """
@@ -48,20 +48,9 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         index=0
     )
     
-    # File upload for selected property
+    # Enhanced bulk upload interface
     st.sidebar.markdown("---")
-    uploaded_files = st.sidebar.file_uploader(
-        "Upload ETL Reports:",
-        type=['xlsx'],
-        accept_multiple_files=True,
-        key="etl_file_upload",
-        help="Drag and drop Excel files here"
-    )
-    
-    # Process uploads for the selected property and week
-    if uploaded_files and selected_property and selected_week:
-        if st.sidebar.button("📤 Upload Files", key="upload_button"):
-            process_etl_uploads(uploaded_files, selected_property, selected_week)
+    render_upload_interface()
     
     # Show current selection
     if selected_week and selected_property:

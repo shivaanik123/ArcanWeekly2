@@ -14,7 +14,7 @@ from parsers.file_parser import parse_directory
 
 def get_available_weeks_and_properties(data_base_path: str) -> Dict[str, List[str]]:
     """Scan data directory to find available weeks and properties."""
-    from config.property_config import get_all_properties
+    from config.property_config import get_all_properties, find_property_by_directory_name
     
     available_data = {'weeks': [], 'properties': []}
     
@@ -33,10 +33,16 @@ def get_available_weeks_and_properties(data_base_path: str) -> Dict[str, List[st
                 if os.path.isdir(prop_path):
                     # Clean up property name (remove trailing spaces)
                     clean_prop_name = prop_item.strip()
+                    
+                    # Map directory name to standard property name to avoid duplicates
+                    standard_property_name = find_property_by_directory_name(clean_prop_name)
+                    if standard_property_name:
+                        clean_prop_name = standard_property_name
+                    
                     if clean_prop_name not in available_data['properties']:
                         available_data['properties'].append(clean_prop_name)
     
-    # Add all properties from comprehensive reports (they all have historical data)
+    # Add configured properties that might not have directories yet
     all_configured_properties = get_all_properties()
     for prop in all_configured_properties:
         if prop not in available_data['properties']:

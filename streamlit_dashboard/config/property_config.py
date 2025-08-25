@@ -6,7 +6,7 @@ Maps property names to their codes/acronyms and logo files
 import os
 
 # Base path for apartment logos
-LOGOS_BASE_PATH = "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/Apartment Logos"
+LOGOS_BASE_PATH = os.environ.get("LOGOS_BASE_PATH", "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/Apartment Logos")
 
 # Property mapping with display names, codes, and logo filenames
 PROPERTY_MAPPING = {
@@ -20,7 +20,7 @@ PROPERTY_MAPPING = {
     "Tapestry Park": {
         "display_name": "Tapestry Park", 
         "property_code": "tapeprk",
-        "logo_file": "Tapestry Logo.png",
+        "logo_file": "Tapestry Logo.jpg",
         "directory_names": ["Tapestry", "Tapestry Park", "tapeprk"]
     },
     "Haven": {
@@ -38,7 +38,7 @@ PROPERTY_MAPPING = {
     "Tall Oaks": {
         "display_name": "Tall Oaks",
         "property_code": "talloak", 
-        "logo_file": None,  # No logo file found for Tall Oaks
+        "logo_file": "Tall Oaks Logo.png",  # No logo file found for Tall Oaks
         "directory_names": ["Tall Oaks", "talloak"]
     },
     "Colony Woods": {
@@ -126,13 +126,14 @@ PROPERTY_MAPPING = {
         "property_code": "marbla",
         "logo_file": "Marbella Logo.png",
         "directory_names": ["Marbella", "marbla"]
+    },
+    "The Hangar": {
+        "display_name": "The Hangar",
+        "property_code": "hangar",
+        "logo_file": "Hangar Logo.png",
+        "directory_names": ["Hangar", "The Hangar", "hangar"]
     }
 }
-
-# Additional logo files that don't have property mappings yet
-UNMAPPED_LOGOS = [
-    "Hangar.png"  # Found in logos directory but no property mapping provided
-]
 
 def get_property_logo_path(property_key: str) -> str:
     """Get the full path to a property's logo file."""
@@ -171,6 +172,17 @@ def find_property_by_directory_name(directory_name: str) -> str:
         # Check if directory contains the property code
         if prop_info["property_code"].lower() in directory_lower:
             return prop_key
+        
+        # Check if directory starts with property name (handles "Marbella 8:11" -> "Marbella")
+        prop_name_lower = prop_key.lower()
+        if directory_lower.startswith(prop_name_lower + " ") or directory_lower.startswith(prop_name_lower + "/"):
+            return prop_key
+        
+        # Check if any configured directory name is a prefix of the actual directory
+        for dir_name in prop_info["directory_names"]:
+            dir_name_lower = dir_name.lower()
+            if directory_lower.startswith(dir_name_lower + " ") or directory_lower.startswith(dir_name_lower + "/"):
+                return prop_key
     
     return directory_name  # Return original if no match found
 

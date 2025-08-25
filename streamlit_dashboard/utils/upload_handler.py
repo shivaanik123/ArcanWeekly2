@@ -13,14 +13,13 @@ import pandas as pd
 
 # Add parent directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from parsers.filename_analyzer import FilenameAnalyzer, FileAnalysisResult
+from parsers.file_parser import analyze_filename, analyze_bulk_upload, FileAnalysisResult
 
 class EnhancedUploadHandler:
     """Enhanced upload handler with intelligent file detection and bulk processing"""
     
     def __init__(self):
-        self.analyzer = FilenameAnalyzer()
-        self.base_data_path = "/Users/shivaanikomanduri/ArcanClean/data"
+        self.base_data_path = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
     
     def render_upload_interface(self):
         """Render the complete bulk upload interface in sidebar"""
@@ -93,7 +92,7 @@ class EnhancedUploadHandler:
     def analyze_uploaded_files(self, uploaded_files: List) -> Dict[str, Any]:
         """Analyze uploaded files and return categorized results"""
         filenames = [file.name for file in uploaded_files]
-        return self.analyzer.analyze_bulk_upload(filenames)
+        return analyze_bulk_upload(filenames)
     
     def process_bulk_upload(self, uploaded_files: List, analysis_results: Dict[str, Any], 
                            selected_date: date, backup_existing: bool = True) -> Dict[str, Any]:
@@ -211,9 +210,22 @@ class EnhancedUploadHandler:
                 for prop, files in by_property.items():
                     st.write(f"**🏢 {prop}** ({len(files)} files)")
                     for file_info in files:
-                        report_desc = self.analyzer.REPORT_PATTERNS.get(
-                            file_info['report_type'], {}
-                        ).get('description', file_info['report_type'])
+                        # Simple description mapping
+                        report_descriptions = {
+                            'resanalytics_box': 'ResAnalytics Box Score Summary',
+                            'work_order': 'Work Order Report',
+                            'resanalytics_unit': 'ResAnalytics Unit Availability Details',
+                            'resanalytics_market': 'ResAnalytics Market Rent Schedule',
+                            'resanalytic_lease': 'ResAnalytic Lease Expiration',
+                            'resaranalytics_delinquency': 'ResARAnalytics Delinquency Summary',
+                            'pending_make': 'Pending Make Ready Unit Details',
+                            'residents_on_notice': 'Residents on Notice Report',
+                            'budget_comparison': 'Budget Comparison Report',
+                            'comprehensive_weekly': 'Comprehensive Weekly Report'
+                        }
+                        report_desc = report_descriptions.get(
+                            file_info['report_type'], file_info['report_type']
+                        )
                         size_kb = file_info['size'] / 1024
                         st.write(f"  • {report_desc}: `{file_info['filename']}` ({size_kb:.1f} KB)")
         
@@ -271,9 +283,8 @@ def validate_etl_file(uploaded_file) -> Dict[str, Any]:
         result['error'] = "File size must be less than 50MB"
         return result
     
-    # Use filename analyzer for pattern validation
-    analyzer = FilenameAnalyzer()
-    analysis = analyzer.analyze_filename(uploaded_file.name)
+    # Use filename analysis for pattern validation
+    analysis = analyze_filename(uploaded_file.name)
     
     if not analysis.is_valid:
         result['valid'] = False
@@ -288,7 +299,7 @@ def get_upload_history(property_name: str = None, limit: int = 10) -> List[Dict[
     Get recent upload history from data directory
     """
     history = []
-    base_path = "/Users/shivaanikomanduri/ArcanClean/data"
+    base_path = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
     
     try:
         # Scan data directory for recent uploads
@@ -347,7 +358,7 @@ def cleanup_old_backups(days_old: int = 30) -> int:
     """
     Clean up old backup files
     """
-    base_path = "/Users/shivaanikomanduri/ArcanClean/data"
+    base_path = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
     cleaned_count = 0
     
     try:

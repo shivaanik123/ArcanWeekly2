@@ -230,7 +230,7 @@ def render_lease_expirations_chart(df: pd.DataFrame, property_name: str):
         # Import the lease parser
         import os
         import sys
-        sys.path.append('/Users/shivaanikomanduri/ArcanClean')
+        sys.path.append(os.environ.get("BASE_PATH", '/Users/shivaanikomanduri/ArcanClean'))
         from parsers.resanalytic_lease_parser import parse_resanalytic_lease_expiration
         
         # This function now creates property-specific data instead of using hardcoded file

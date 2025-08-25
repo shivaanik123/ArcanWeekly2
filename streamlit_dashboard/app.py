@@ -435,9 +435,17 @@ def main():
     """, unsafe_allow_html=True)
     
     # Data path (adjust as needed)
-    DATA_PATH = "/Users/shivaanikomanduri/ArcanClean/data"
+    DATA_PATH = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
     
-    # Load available weeks and properties
+    # Handle upload notifications
+    if st.session_state.get('upload_complete', False):
+        uploaded_properties = st.session_state.get('last_upload_properties', [])
+        if uploaded_properties:
+            st.success(f"✅ Data updated for: {', '.join(uploaded_properties)}")
+        # Clear the notification
+        st.session_state.upload_complete = False
+    
+    # Load available weeks and properties (refresh after uploads)
     available_data = get_available_weeks_and_properties(DATA_PATH)
     
     # Use the proper render_sidebar function
@@ -470,6 +478,11 @@ def main():
     
     # Load data for selected week/property
     with st.spinner("Loading data..."):
+        # Force cache clear if this property was recently uploaded to
+        if (st.session_state.get('last_upload_properties', []) and 
+            selected_property in st.session_state.get('last_upload_properties', [])):
+            st.cache_data.clear()
+        
         data = load_property_data(DATA_PATH, selected_week, selected_property)
     
     # If weekly data is missing, continue with empty data (graphs will still work with comprehensive reports)
