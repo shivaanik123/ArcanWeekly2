@@ -135,7 +135,7 @@ def identify_resanalytics_unit_file(filename: str) -> bool:
         True if file matches pattern, False otherwise
     """
     # Remove property identifier and extension for pattern matching
-    base_name = re.sub(r'_[a-z]+\.xlsx$', '', filename.lower())
+    base_name = re.sub(r'_[a-z0-9]+\.xlsx$', '', filename.lower())
     return base_name.startswith('resanalytics_unit')
 
 

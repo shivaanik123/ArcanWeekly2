@@ -626,37 +626,61 @@ def main():
         render_move_schedule(unit_availability_data, total_property_units, current_occupied)
     
     # 3. Historical Analytics & Graphs Section
-    # Try to load comprehensive report data for historical analysis
+    # Load comprehensive report data for historical analysis
     comprehensive_historical_data = None
+    full_comprehensive_data = None
+    matching_report = None
     debug_info = []
     
     try:
         debug_info.append(f"Selected property: '{selected_property}'")
         
-        from parsers.comprehensive_historical_parser import ComprehensiveHistoricalParser
-        
         # Look for comprehensive report for this property
-        reports_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports"
-        parser = ComprehensiveHistoricalParser(reports_path)
-        property_reports = parser.discover_property_reports()
+        reports_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports/Comprehensive Reports"
         
-        debug_info.append(f"Found {len(property_reports)} comprehensive reports")
-        debug_info.append(f"Available reports: {list(property_reports.keys())}")
-        
-        # Find matching comprehensive report
-        matching_report = None
-        for prop_name, file_path in property_reports.items():
-            if selected_property and selected_property.lower().strip() in prop_name.lower():
-                matching_report = file_path
-                debug_info.append(f"✅ Found matching report: '{prop_name}' -> {file_path}")
-                break
+        if os.path.exists(reports_path):
+            # Get all Excel files in the comprehensive reports directory
+            excel_files = [f for f in os.listdir(reports_path) if f.endswith('.xlsx') and not f.startswith('~$')]
+            debug_info.append(f"Found {len(excel_files)} comprehensive reports")
+            debug_info.append(f"Available reports: {[f.replace(' Weekly Report.xlsx', '') for f in excel_files]}")
+            
+            # Find matching comprehensive report
+            matching_report = None
+            for filename in excel_files:
+                # Extract property name from filename (remove " Weekly Report.xlsx" and variants)
+                prop_name = filename.replace(' Weekly Report.xlsx', '').replace(' Weekly Report (1).xlsx', '')
+                
+                # Clean property names for better matching (remove spaces and common words)
+                selected_clean = selected_property.lower().strip().replace(' ', '').replace('apartments', '') if selected_property else ''
+                prop_clean = prop_name.lower().strip().replace(' ', '').replace('apartments', '')
+                
+                # Special case for Woodland Common Apartments
+                if 'woodland' in selected_property.lower() and 'woodland' in prop_name.lower():
+                    matching_report = os.path.join(reports_path, filename)
+                    debug_info.append(f"✅ Found matching report (woodland special): '{prop_name}' → {filename}")
+                    break
+                
+                # Check for exact match, partial match, or core name match
+                if (selected_property and 
+                    (selected_property.lower().strip() == prop_name.lower().strip() or
+                     selected_property.lower().strip() in prop_name.lower() or
+                     prop_name.lower() in selected_property.lower().strip() or
+                     selected_clean in prop_clean or
+                     prop_clean in selected_clean or
+                     len(selected_clean) > 3 and selected_clean[:6] in prop_clean)):
+                    matching_report = os.path.join(reports_path, filename)
+                    debug_info.append(f"✅ Found matching report: '{prop_name}' → {filename}")
+                    break
+        else:
+            debug_info.append(f"❌ Comprehensive reports directory not found: {reports_path}")
+            matching_report = None
         
         if matching_report:
             debug_info.append(f"Attempting to parse: {matching_report}")
             
-            # Use comprehensive parser directly instead of file_parser
-            from parsers.comprehensive_internal_parser import parse_comprehensive_internal_report
-            comprehensive_data = parse_comprehensive_internal_report(matching_report)
+            # Use file parser to get the correct parser for this file
+            from parsers.file_parser import parse_file
+            comprehensive_data = parse_file(matching_report)
             
             debug_info.append(f"Parse result keys: {list(comprehensive_data.keys()) if isinstance(comprehensive_data, dict) else 'Not a dict'}")
             
@@ -664,6 +688,7 @@ def main():
                 debug_info.append(f"❌ Parse error: {comprehensive_data['error']}")
             elif 'historical_data' in comprehensive_data:
                 comprehensive_historical_data = comprehensive_data['historical_data']
+                full_comprehensive_data = comprehensive_data
                 debug_info.append(f"✅ Historical data loaded successfully")
                 if 'weekly_occupancy_data' in comprehensive_historical_data:
                     debug_info.append(f"✅ Found {len(comprehensive_historical_data['weekly_occupancy_data'])} weeks of data")
@@ -684,22 +709,6 @@ def main():
     with st.expander("🔍 Debug: Historical Data Loading"):
         for info in debug_info:
             st.write(info)
-    
-    # Render graphs section
-    # Get the full comprehensive data (not just historical_data)
-    full_comprehensive_data = None
-    if matching_report:
-        try:
-            from parsers.comprehensive_internal_parser import parse_comprehensive_internal_report
-            full_comprehensive_data = parse_comprehensive_internal_report(matching_report)
-            debug_info.append(f"✅ Full comprehensive data loaded for graphs")
-            if 'historical_data' in full_comprehensive_data and 'rent_data' in full_comprehensive_data['historical_data']:
-                rent_count = len(full_comprehensive_data['historical_data']['rent_data'])
-                debug_info.append(f"✅ Rent data available: {rent_count} months")
-            else:
-                debug_info.append(f"❌ No rent data in full comprehensive data")
-        except Exception as e:
-            debug_info.append(f"❌ Error loading full comprehensive data: {str(e)}")
     
     render_graphs_section(comprehensive_historical_data, selected_property, full_comprehensive_data)
     

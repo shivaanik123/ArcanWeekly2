@@ -117,8 +117,11 @@ def identify_file_type(file_path: str) -> Optional[Dict[str, Any]]:
     Returns:
         Dictionary with pattern info if identified, None otherwise
     """
+    filename = os.path.basename(file_path)
     for pattern_info in FILE_PATTERNS:
-        if pattern_info['identifier'](file_path):
+        # Try with full path first (for comprehensive parsers that need to read sheets)
+        # then fall back to filename only
+        if pattern_info['identifier'](file_path) or pattern_info['identifier'](filename):
             return pattern_info
     
     return None

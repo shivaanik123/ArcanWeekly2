@@ -116,7 +116,7 @@ def identify_resanalytics_market_file(filename: str) -> bool:
     Returns:
         True if file matches pattern, False otherwise
     """
-    base_name = re.sub(r'_[a-z]+\.xlsx$', '', filename.lower())
+    base_name = re.sub(r'_[a-z0-9]+\.xlsx$', '', filename.lower())
     return base_name.startswith('resanalytics_market')
 
 

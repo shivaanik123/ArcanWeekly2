@@ -137,7 +137,7 @@ def identify_residents_on_notice_file(filename: str) -> bool:
     Returns:
         True if file matches pattern, False otherwise
     """
-    base_name = re.sub(r'_[a-z]+\.xlsx$', '', filename.lower())
+    base_name = re.sub(r'_[a-z0-9]+\.xlsx$', '', filename.lower())
     return base_name.startswith('residents_on_notice') or 'residents' in base_name and 'notice' in base_name
 
 

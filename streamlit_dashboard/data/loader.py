@@ -60,8 +60,8 @@ def load_property_data(data_base_path: str, week: str, property_name: str) -> Di
         else:
             return {'error': f"Data not found for {property_name} in week {week}"}
     
-    # Extract property code from filenames
-    excel_files = [f for f in os.listdir(property_path) if f.endswith('.xlsx')]
+    # Extract property code from filenames (skip backup files)
+    excel_files = [f for f in os.listdir(property_path) if f.endswith('.xlsx') and not f.startswith('~$') and '.backup_' not in f]
     property_code = None
     
     for filename in excel_files:
@@ -73,7 +73,7 @@ def load_property_data(data_base_path: str, week: str, property_name: str) -> Di
         if property_code:
             break
     
-    # Parse all files
+    # Parse all files (use property_code if found, otherwise parse all files)
     results = parse_directory(property_path, property_filter=property_code)
     
     # Organize by parser type

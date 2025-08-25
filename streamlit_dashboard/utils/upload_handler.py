@@ -64,6 +64,11 @@ def process_etl_uploads(uploaded_files: List, property_name: str, week: str) -> 
                 
                 results['success'].append(f"Uploaded {uploaded_file.name}")
                 
+                # Debug: Verify file was written
+                if os.path.exists(file_path):
+                    file_size = os.path.getsize(file_path)
+                    results['success'].append(f"  File size: {file_size:,} bytes")
+                
             except Exception as e:
                 results['errors'].append(f"{uploaded_file.name}: {str(e)}")
         
@@ -78,9 +83,12 @@ def process_etl_uploads(uploaded_files: List, property_name: str, week: str) -> 
             for error_msg in results['errors']:
                 st.sidebar.write(f"  • {error_msg}")
         
-        # Refresh the page to show new data
+        # Trigger automatic rerun to show new data
         if results['success'] and not results['errors']:
-            st.sidebar.info("🔄 Refresh the page to see updated data")
+            st.sidebar.success("🔄 Data updated! Dashboard will refresh automatically.")
+            # Clear any cached data and trigger rerun
+            st.cache_data.clear()
+            st.rerun()
             
     except Exception as e:
         st.sidebar.error(f"Upload failed: {str(e)}")

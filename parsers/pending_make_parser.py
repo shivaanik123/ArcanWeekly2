@@ -112,7 +112,7 @@ def identify_pending_make_file(filename: str) -> bool:
     Returns:
         True if file matches pattern, False otherwise
     """
-    base_name = re.sub(r'_[a-z]+\.xlsx$', '', filename.lower())
+    base_name = re.sub(r'_[a-z0-9]+\.xlsx$', '', filename.lower())
     base_name = base_name.replace('._', '_')  # Handle the ._ pattern
     return base_name.startswith('pending_make')
 

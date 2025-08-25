@@ -119,7 +119,7 @@ def identify_budget_comparison_file(filename: str) -> bool:
     Returns:
         True if file matches pattern, False otherwise
     """
-    base_name = re.sub(r'_[a-z]+\.xlsx$', '', filename.lower())
+    base_name = re.sub(r'_[a-z0-9]+\.xlsx$', '', filename.lower())
     # Handle special characters in budget comparison files
     base_name = re.sub(r'\([^)]*\)', '', base_name)  # Remove parentheses content
     base_name = re.sub(r'\^[^_]*', '', base_name)    # Remove ^ content

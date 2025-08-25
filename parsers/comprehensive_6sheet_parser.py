@@ -139,6 +139,26 @@ def parse_input_sheet(file_path: str) -> Dict[str, Any]:
                             # Create week string for compatibility with existing code
                             week_str = date_cell.strftime('%m/%d')
                             
+                            # Extract work order and make ready data from columns 46-47
+                            work_orders = 0
+                            make_readies = 0
+                            
+                            try:
+                                if df.shape[1] > 46:
+                                    wo_cell = df.iloc[i, 46]
+                                    if pd.notna(wo_cell) and str(wo_cell).replace('.', '').isdigit():
+                                        work_orders = int(float(wo_cell))
+                            except (ValueError, TypeError):
+                                pass
+                                
+                            try:
+                                if df.shape[1] > 47:
+                                    mr_cell = df.iloc[i, 47]
+                                    if pd.notna(mr_cell) and str(mr_cell).replace('.', '').isdigit():
+                                        make_readies = int(float(mr_cell))
+                            except (ValueError, TypeError):
+                                pass
+                            
                             historical_occupancy.append({
                                 'week': week_str,
                                 'date': date_cell,
@@ -146,7 +166,9 @@ def parse_input_sheet(file_path: str) -> Dict[str, Any]:
                                 'total_units': total_units,
                                 'occupancy_percentage': occupancy_pct,
                                 'leased_percentage': occupancy_pct,  # Use same value for now
-                                'projected_percentage': occupancy_pct  # Use same value for now
+                                'projected_percentage': occupancy_pct,  # Use same value for now
+                                'work_orders_count': work_orders,
+                                'make_readies_count': make_readies
                             })
                             
                         except (ValueError, TypeError):

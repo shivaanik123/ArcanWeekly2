@@ -126,9 +126,9 @@ def parse_occupancy_sheet(file_path: str) -> Dict[str, Any]:
                 if not pd.isna(df.iloc[i, 13]) and isinstance(df.iloc[i, 13], datetime):
                     week_data = {
                         'date': df.iloc[i, 13],
-                        'occupancy_percent': float(df.iloc[i, 14]) if not pd.isna(df.iloc[i, 14]) else 0.0,
-                        'leased_percent': float(df.iloc[i, 15]) if not pd.isna(df.iloc[i, 15]) else 0.0,
-                        'projection_percent': float(df.iloc[i, 16]) if not pd.isna(df.iloc[i, 16]) else 0.0,
+                        'occupancy_percentage': float(df.iloc[i, 14]) if not pd.isna(df.iloc[i, 14]) else 0.0,
+                        'leased_percentage': float(df.iloc[i, 15]) if not pd.isna(df.iloc[i, 15]) else 0.0,
+                        'projected_percentage': float(df.iloc[i, 16]) if not pd.isna(df.iloc[i, 16]) else 0.0,
                         'make_readies_count': int(df.iloc[i, 17]) if not pd.isna(df.iloc[i, 17]) else 0,
                         'work_orders_count': int(df.iloc[i, 18]) if not pd.isna(df.iloc[i, 18]) else 0
                     }
