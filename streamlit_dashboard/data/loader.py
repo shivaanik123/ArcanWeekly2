@@ -66,10 +66,14 @@ def load_property_data(data_base_path: str, week: str, property_name: str) -> Di
     
     for filename in excel_files:
         parts = filename.split('_')
+        # Look for the part before .xlsx, but skip numeric suffixes like "_2"
         for part in parts:
             if part.endswith('.xlsx'):
-                property_code = part.replace('.xlsx', '')
-                break
+                extracted = part.replace('.xlsx', '')
+                # Skip numeric-only codes (like "2" from "_2.xlsx") and very short codes
+                if extracted and not extracted.isdigit() and len(extracted) > 2:
+                    property_code = extracted
+                    break
         if property_code:
             break
     
