@@ -1,0 +1,323 @@
+{
+  "version": "tree-0.1",
+  "tree": {
+    "id": "App",
+    "path": "",
+    "children": {
+      "ArcanDashboard-dev": {
+        "id": "ArcanDashboard-dev",
+        "path": "ArcanDashboard-dev",
+        "children": {
+          "DataBucket": {
+            "id": "DataBucket",
+            "path": "ArcanDashboard-dev/DataBucket",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "ArcanDashboard-dev/DataBucket/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::S3::Bucket",
+                  "aws:cdk:cloudformation:props": {
+                    "bucketName": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arcan-dashboard-data-dev-",
+                          {
+                            "Ref": "AWS::AccountId"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_s3.CfnBucket",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_s3.Bucket",
+              "version": "2.100.0"
+            }
+          },
+          "DataBucketName": {
+            "id": "DataBucketName",
+            "path": "ArcanDashboard-dev/DataBucketName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.100.0"
+            }
+          },
+          "EBServiceRole": {
+            "id": "EBServiceRole",
+            "path": "ArcanDashboard-dev/EBServiceRole",
+            "children": {
+              "ImportEBServiceRole": {
+                "id": "ImportEBServiceRole",
+                "path": "ArcanDashboard-dev/EBServiceRole/ImportEBServiceRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.100.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "ArcanDashboard-dev/EBServiceRole/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                  "aws:cdk:cloudformation:props": {
+                    "assumeRolePolicyDocument": {
+                      "Statement": [
+                        {
+                          "Action": "sts:AssumeRole",
+                          "Effect": "Allow",
+                          "Principal": {
+                            "Service": "elasticbeanstalk.amazonaws.com"
+                          }
+                        }
+                      ],
+                      "Version": "2012-10-17"
+                    },
+                    "managedPolicyArns": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":iam::aws:policy/AdministratorAccess"
+                          ]
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_iam.Role",
+              "version": "2.100.0"
+            }
+          },
+          "EC2InstanceRole": {
+            "id": "EC2InstanceRole",
+            "path": "ArcanDashboard-dev/EC2InstanceRole",
+            "children": {
+              "ImportEC2InstanceRole": {
+                "id": "ImportEC2InstanceRole",
+                "path": "ArcanDashboard-dev/EC2InstanceRole/ImportEC2InstanceRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.100.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "ArcanDashboard-dev/EC2InstanceRole/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                  "aws:cdk:cloudformation:props": {
+                    "assumeRolePolicyDocument": {
+                      "Statement": [
+                        {
+                          "Action": "sts:AssumeRole",
+                          "Effect": "Allow",
+                          "Principal": {
+                            "Service": "ec2.amazonaws.com"
+                          }
+                        }
+                      ],
+                      "Version": "2012-10-17"
+                    },
+                    "managedPolicyArns": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":iam::aws:policy/AdministratorAccess"
+                          ]
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_iam.Role",
+              "version": "2.100.0"
+            }
+          },
+          "EC2InstanceProfile": {
+            "id": "EC2InstanceProfile",
+            "path": "ArcanDashboard-dev/EC2InstanceProfile",
+            "attributes": {
+              "aws:cdk:cloudformation:type": "AWS::IAM::InstanceProfile",
+              "aws:cdk:cloudformation:props": {
+                "roles": [
+                  {
+                    "Ref": "EC2InstanceRole0BAA8CDD"
+                  }
+                ]
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_iam.CfnInstanceProfile",
+              "version": "2.100.0"
+            }
+          },
+          "ArcanDashboardApp": {
+            "id": "ArcanDashboardApp",
+            "path": "ArcanDashboard-dev/ArcanDashboardApp",
+            "attributes": {
+              "aws:cdk:cloudformation:type": "AWS::ElasticBeanstalk::Application",
+              "aws:cdk:cloudformation:props": {
+                "applicationName": "arcan-dashboard-dev",
+                "description": "Arcan Property Dashboard - dev environment"
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_elasticbeanstalk.CfnApplication",
+              "version": "2.100.0"
+            }
+          },
+          "ArcanDashboardEnv": {
+            "id": "ArcanDashboardEnv",
+            "path": "ArcanDashboard-dev/ArcanDashboardEnv",
+            "attributes": {
+              "aws:cdk:cloudformation:type": "AWS::ElasticBeanstalk::Environment",
+              "aws:cdk:cloudformation:props": {
+                "applicationName": {
+                  "Ref": "ArcanDashboardApp"
+                },
+                "environmentName": "arcan-dashboard-dev",
+                "optionSettings": [
+                  {
+                    "namespace": "aws:autoscaling:launchconfiguration",
+                    "optionName": "InstanceType",
+                    "value": "t3.small"
+                  },
+                  {
+                    "namespace": "aws:autoscaling:launchconfiguration",
+                    "optionName": "IamInstanceProfile",
+                    "value": {
+                      "Ref": "EC2InstanceProfile"
+                    }
+                  },
+                  {
+                    "namespace": "aws:elasticbeanstalk:application:environment",
+                    "optionName": "USE_S3_STORAGE",
+                    "value": "true"
+                  },
+                  {
+                    "namespace": "aws:elasticbeanstalk:application:environment",
+                    "optionName": "S3_BUCKET_NAME",
+                    "value": {
+                      "Ref": "DataBucketE3889A50"
+                    }
+                  },
+                  {
+                    "namespace": "aws:elasticbeanstalk:application:environment",
+                    "optionName": "S3_DATA_PREFIX",
+                    "value": "data/"
+                  }
+                ],
+                "solutionStackName": "64bit Amazon Linux 2023 v4.7.1 running Python 3.13",
+                "tier": {
+                  "name": "WebServer",
+                  "type": "Standard"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_elasticbeanstalk.CfnEnvironment",
+              "version": "2.100.0"
+            }
+          },
+          "EnvironmentURL": {
+            "id": "EnvironmentURL",
+            "path": "ArcanDashboard-dev/EnvironmentURL",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.100.0"
+            }
+          },
+          "EnvironmentName": {
+            "id": "EnvironmentName",
+            "path": "ArcanDashboard-dev/EnvironmentName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.100.0"
+            }
+          },
+          "CDKMetadata": {
+            "id": "CDKMetadata",
+            "path": "ArcanDashboard-dev/CDKMetadata",
+            "children": {
+              "Default": {
+                "id": "Default",
+                "path": "ArcanDashboard-dev/CDKMetadata/Default",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnResource",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "constructs.Construct",
+              "version": "10.4.2"
+            }
+          },
+          "BootstrapVersion": {
+            "id": "BootstrapVersion",
+            "path": "ArcanDashboard-dev/BootstrapVersion",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnParameter",
+              "version": "2.100.0"
+            }
+          },
+          "CheckBootstrapVersion": {
+            "id": "CheckBootstrapVersion",
+            "path": "ArcanDashboard-dev/CheckBootstrapVersion",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnRule",
+              "version": "2.100.0"
+            }
+          }
+        },
+        "constructInfo": {
+          "fqn": "aws-cdk-lib.Stack",
+          "version": "2.100.0"
+        }
+      },
+      "Tree": {
+        "id": "Tree",
+        "path": "Tree",
+        "constructInfo": {
+          "fqn": "constructs.Construct",
+          "version": "10.4.2"
+        }
+      }
+    },
+    "constructInfo": {
+      "fqn": "aws-cdk-lib.App",
+      "version": "2.100.0"
+    }
+  }
+}

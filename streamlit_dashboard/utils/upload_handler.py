@@ -1,5 +1,5 @@
 """
-Enhanced Bulk ETL Report Upload Handler
+Enhanced Bulk ETL Report Upload Handler with S3 support
 Supports intelligent file detection, automatic organization by property/date, and bulk uploads
 """
 
@@ -13,18 +13,29 @@ import pandas as pd
 
 # Add parent directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from parsers.file_parser import analyze_filename, analyze_bulk_upload, FileAnalysisResult
+from utils.s3_service import get_storage_service
+from config.upload_config import get_upload_properties, validate_filename
 
 class EnhancedUploadHandler:
     """Enhanced upload handler with intelligent file detection and bulk processing"""
     
     def __init__(self):
-        self.base_data_path = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
+        self.storage_service = get_storage_service()
     
     def render_upload_interface(self):
         """Render the complete bulk upload interface in sidebar"""
         
-        st.sidebar.header("Bulk Upload")
+        st.sidebar.header("📤 Bulk Upload")
+        
+        # Property selection (required)
+        selected_property = st.sidebar.selectbox(
+            "Select Property",
+            options=get_upload_properties(),
+            index=None,
+            placeholder="Choose a property...",
+            help="Select the property for these reports"
+        )
+        
         # Date selection
         selected_date = st.sidebar.date_input(
             "Report Date",
@@ -32,46 +43,45 @@ class EnhancedUploadHandler:
             help="Select the date/week this data represents"
         )
         
+        # File upload (only show if property is selected)
+        uploaded_files = None
+        if selected_property:
+            uploaded_files = st.sidebar.file_uploader(
+                "Upload Reports",
+                type=['xlsx'],
+                accept_multiple_files=True,
+                help="Select multiple Excel files to upload"
+            )
+        else:
+            st.sidebar.info("👆 Please select a property first")
         
-        # File upload
-        uploaded_files = st.sidebar.file_uploader(
-            "Upload Reports",
-            type=['xlsx'],
-            accept_multiple_files=True,
-            help="Select multiple Excel files to upload"
-        )
-        
-        if uploaded_files:
-            # Analyze files
-            analysis_results = self.analyze_uploaded_files(uploaded_files)
+        if uploaded_files and selected_property:
+            # Validate all files first (before any upload)
+            validation_results = self.validate_uploaded_files(uploaded_files)
             
-            # Show quick summary
-            valid_count = len(analysis_results['valid_files'])
-            invalid_count = len(analysis_results['invalid_files'])
-            property_count = len(analysis_results['by_property'])
+            valid_count = len(validation_results['valid_files'])
+            invalid_count = len(validation_results['invalid_files'])
             
+            # Show validation results
             if valid_count > 0:
-                st.sidebar.success(f"✅ {valid_count} valid files detected")
-                st.sidebar.info(f"🏢 {property_count} properties found")
+                st.sidebar.success(f"✅ {valid_count} valid files")
                 
-                # Show properties found
-                properties = [f"{data['property_name']} ({len(data['files'])} files)" 
-                             for data in analysis_results['by_property'].values()]
-                st.sidebar.write("**Properties:**")
-                for prop in properties:
-                    st.sidebar.write(f"• {prop}")
+                with st.sidebar.expander(f"📁 Valid Files ({valid_count})", expanded=True):
+                    for file_info in validation_results['valid_files']:
+                        st.write(f"📄 **{file_info['filename']}**")
+                        st.write(f"Type: {file_info['report_type']}")
             
             if invalid_count > 0:
-                st.sidebar.error(f"❌ {invalid_count} files have naming issues")
+                st.sidebar.error(f"❌ {invalid_count} invalid files")
                 
-                # Show invalid files
-                with st.sidebar.expander("❌ Invalid Files"):
-                    for invalid_file in analysis_results['invalid_files']:
-                        st.write(f"**{invalid_file.filename}**")
-                        st.write(f"Error: {invalid_file.error_message}")
+                with st.sidebar.expander("❌ Invalid Files", expanded=True):
+                    for file_info in validation_results['invalid_files']:
+                        st.write(f"**{file_info['filename']}**")
+                        st.write(file_info['error_message'])
+                        st.markdown("---")
             
-            # Upload controls
-            if valid_count > 0:
+            # Upload controls (only show if ALL files are valid)
+            if valid_count > 0 and invalid_count == 0:
                 st.sidebar.markdown("---")
                 
                 backup_existing = st.sidebar.checkbox(
@@ -82,26 +92,47 @@ class EnhancedUploadHandler:
                 
                 # Upload button
                 if st.sidebar.button("🚀 Upload Files", type="primary", use_container_width=True):
-                    self.process_bulk_upload(
+                    self.process_simplified_upload(
                         uploaded_files=uploaded_files,
-                        analysis_results=analysis_results,
+                        selected_property=selected_property,
                         selected_date=selected_date,
                         backup_existing=backup_existing
                     )
+            elif invalid_count > 0:
+                st.sidebar.warning("⚠️ Fix invalid files before uploading")
     
-    def analyze_uploaded_files(self, uploaded_files: List) -> Dict[str, Any]:
-        """Analyze uploaded files and return categorized results"""
-        filenames = [file.name for file in uploaded_files]
-        return analyze_bulk_upload(filenames)
+    def validate_uploaded_files(self, uploaded_files: List) -> Dict[str, Any]:
+        """Validate uploaded files using simple pattern matching"""
+        results = {
+            'valid_files': [],
+            'invalid_files': []
+        }
+        
+        for uploaded_file in uploaded_files:
+            filename = uploaded_file.name
+            is_valid, report_type, error_message = validate_filename(filename)
+            
+            if is_valid:
+                results['valid_files'].append({
+                    'filename': filename,
+                    'report_type': report_type
+                })
+            else:
+                results['invalid_files'].append({
+                    'filename': filename,
+                    'error_message': error_message
+                })
+        
+        return results
     
-    def process_bulk_upload(self, uploaded_files: List, analysis_results: Dict[str, Any], 
-                           selected_date: date, backup_existing: bool = True) -> Dict[str, Any]:
+    def process_simplified_upload(self, uploaded_files: List, selected_property: str,
+                                 selected_date: date, backup_existing: bool = True) -> Dict[str, Any]:
         """
-        Process bulk upload with intelligent file organization
+        Process simplified upload with user-selected property
         
         Args:
             uploaded_files: List of uploaded file objects from Streamlit
-            analysis_results: Results from filename analysis
+            selected_property: User-selected property name
             selected_date: Selected date for the reports
             backup_existing: Whether to backup existing files
         
@@ -114,61 +145,49 @@ class EnhancedUploadHandler:
             'success': [],
             'errors': [],
             'backups': [],
-            'total_files': len(analysis_results['valid_files'])
+            'total_files': len(uploaded_files)
         }
         
-        # Create file mapping for quick lookup
-        file_map = {file.name: file for file in uploaded_files}
-        
-        # Process each valid file
+        # Process each file with the selected property
         with st.sidebar:
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            for i, file_result in enumerate(analysis_results['valid_files']):
+            for i, uploaded_file in enumerate(uploaded_files):
                 try:
                     # Update progress
-                    progress = (i + 1) / len(analysis_results['valid_files'])
+                    progress = (i + 1) / len(uploaded_files)
                     progress_bar.progress(progress)
-                    status_text.text(f"Processing {file_result.filename}...")
+                    status_text.text(f"Processing {uploaded_file.name}...")
                     
-                    # Create directory structure based on detected property
-                    property_path = os.path.join(
-                        self.base_data_path,
-                        week_string,
-                        file_result.property_name
-                    )
-                    os.makedirs(property_path, exist_ok=True)
+                    # Create S3 key: data/week/property/filename
+                    s3_key = f"{week_string}/{selected_property}/{uploaded_file.name}"
                     
-                    # File path
-                    file_path = os.path.join(property_path, file_result.filename)
+                    # Handle existing files - create backup if needed
+                    if backup_existing and self.storage_service.file_exists(s3_key):
+                        backup_success = self.storage_service.backup_file(s3_key)
+                        if backup_success:
+                            upload_results['backups'].append(f"Backed up: {uploaded_file.name}")
                     
-                    # Handle existing files
-                    if os.path.exists(file_path) and backup_existing:
-                        backup_path = f"{file_path}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                        shutil.move(file_path, backup_path)
-                        upload_results['backups'].append(f"Backed up: {file_result.filename}")
+                    # Get file data and convert memoryview to bytes for S3
+                    file_buffer = uploaded_file.getbuffer()
+                    file_data = bytes(file_buffer)  # Convert memoryview to bytes
+                    file_size = len(file_data)
                     
-                    # Get the uploaded file object
-                    uploaded_file = file_map.get(file_result.filename)
-                    if uploaded_file:
-                        # Write the file
-                        with open(file_path, "wb") as f:
-                            f.write(uploaded_file.getbuffer())
-                        
-                        # Get file size for confirmation
-                        file_size = os.path.getsize(file_path)
+                    # Write the file using storage service
+                    success = self.storage_service.write_file(s3_key, file_data)
+                    
+                    if success:
                         upload_results['success'].append({
-                            'filename': file_result.filename,
-                            'property': file_result.property_name,
-                            'report_type': file_result.report_type,
+                            'filename': uploaded_file.name,
+                            'property': selected_property,
                             'size': file_size
                         })
                     else:
-                        upload_results['errors'].append(f"Could not find file object: {file_result.filename}")
+                        upload_results['errors'].append(f"Failed to write {uploaded_file.name}")
                 
                 except Exception as e:
-                    upload_results['errors'].append(f"{file_result.filename}: {str(e)}")
+                    upload_results['errors'].append(f"{uploaded_file.name}: {str(e)}")
             
             # Complete progress
             progress_bar.progress(1.0)
@@ -185,9 +204,7 @@ class EnhancedUploadHandler:
             # Store upload notification in session state for main app
             if 'upload_complete' not in st.session_state:
                 st.session_state.upload_complete = True
-            st.session_state.last_upload_properties = list(set([
-                file_info['property'] for file_info in upload_results['success']
-            ]))
+            st.session_state.last_upload_properties = [selected_property]
             st.rerun()
         
         return upload_results
@@ -210,24 +227,9 @@ class EnhancedUploadHandler:
                 for prop, files in by_property.items():
                     st.write(f"**🏢 {prop}** ({len(files)} files)")
                     for file_info in files:
-                        # Simple description mapping
-                        report_descriptions = {
-                            'resanalytics_box': 'ResAnalytics Box Score Summary',
-                            'work_order': 'Work Order Report',
-                            'resanalytics_unit': 'ResAnalytics Unit Availability Details',
-                            'resanalytics_market': 'ResAnalytics Market Rent Schedule',
-                            'resanalytic_lease': 'ResAnalytic Lease Expiration',
-                            'resaranalytics_delinquency': 'ResARAnalytics Delinquency Summary',
-                            'pending_make': 'Pending Make Ready Unit Details',
-                            'residents_on_notice': 'Residents on Notice Report',
-                            'budget_comparison': 'Budget Comparison Report',
-                            'comprehensive_weekly': 'Comprehensive Weekly Report'
-                        }
-                        report_desc = report_descriptions.get(
-                            file_info['report_type'], file_info['report_type']
-                        )
+                        # Just show filename and size - report type not needed
                         size_kb = file_info['size'] / 1024
-                        st.write(f"  • {report_desc}: `{file_info['filename']}` ({size_kb:.1f} KB)")
+                        st.write(f"  • `{file_info['filename']}` ({size_kb:.1f} KB)")
         
         if results['backups']:
             st.sidebar.info(f"🔄 Created {len(results['backups'])} backups")
@@ -238,110 +240,57 @@ class EnhancedUploadHandler:
                 for error in results['errors']:
                     st.write(f"• {error}")
 
-# Legacy function support (for backward compatibility)
-def process_etl_uploads(uploaded_files: List, property_name: str, week: str) -> Dict[str, Any]:
-    """
-    Legacy function for backward compatibility
-    Now redirects to enhanced bulk upload system
-    """
-    st.warning("⚠️ This upload method is deprecated. Please use the new bulk upload interface in the sidebar.")
-    
-    # Convert to new format
-    try:
-        selected_date = datetime.strptime(week, "%m_%d_%Y").date()
-    except ValueError:
-        selected_date = datetime.now().date()
-    
-    handler = EnhancedUploadHandler()
-    
-    # Analyze files
-    analysis_results = handler.analyze_uploaded_files(uploaded_files)
-    
-    # Process upload
-    return handler.process_bulk_upload(
-        uploaded_files=uploaded_files,
-        analysis_results=analysis_results,
-        selected_date=selected_date,
-        backup_existing=True
-    )
 
-def validate_etl_file(uploaded_file) -> Dict[str, Any]:
+# Main interface function
+def render_upload_interface():
     """
-    Enhanced validation using filename analyzer
+    Main function to render the enhanced upload interface
+    This is the primary entry point for the upload system
     """
-    result = {'valid': True, 'error': None}
-    
-    # Check file extension
-    if not uploaded_file.name.lower().endswith('.xlsx'):
-        result['valid'] = False
-        result['error'] = "File must be an Excel (.xlsx) file"
-        return result
-    
-    # Check file size (max 50MB)
-    if uploaded_file.size > 50 * 1024 * 1024:
-        result['valid'] = False
-        result['error'] = "File size must be less than 50MB"
-        return result
-    
-    # Use filename analysis for pattern validation
-    analysis = analyze_filename(uploaded_file.name)
-    
-    if not analysis.is_valid:
-        result['valid'] = False
-        result['error'] = analysis.error_message
-        if analysis.suggested_fixes:
-            result['suggestions'] = analysis.suggested_fixes
-    
-    return result
+    handler = EnhancedUploadHandler()
+    handler.render_upload_interface()
 
 def get_upload_history(property_name: str = None, limit: int = 10) -> List[Dict[str, Any]]:
     """
-    Get recent upload history from data directory
+    Get recent upload history using storage service
     """
     history = []
-    base_path = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
+    storage_service = get_storage_service()
     
     try:
-        # Scan data directory for recent uploads
-        for week_folder in os.listdir(base_path):
-            week_path = os.path.join(base_path, week_folder)
-            if os.path.isdir(week_path) and '_' in week_folder:
-                try:
-                    # Parse week date
-                    week_date = datetime.strptime(week_folder, "%m_%d_%Y")
-                    
-                    # Scan properties in this week
-                    for prop_folder in os.listdir(week_path):
-                        prop_path = os.path.join(week_path, prop_folder)
-                        if os.path.isdir(prop_path):
-                            
-                            # Count files
-                            files = [f for f in os.listdir(prop_path) 
-                                   if f.endswith('.xlsx') and not f.startswith('~$')]
-                            
-                            if files:
-                                # Get most recent file modification time
-                                file_times = []
-                                for file in files:
-                                    file_path = os.path.join(prop_path, file)
-                                    file_times.append(os.path.getmtime(file_path))
-                                
-                                if file_times:
-                                    latest_time = datetime.fromtimestamp(max(file_times))
-                                    
-                                    history.append({
-                                        'property_name': prop_folder,
-                                        'week': week_folder,
-                                        'week_date': week_date,
-                                        'file_count': len(files),
-                                        'last_upload': latest_time,
-                                        'files': files
-                                    })
-                except ValueError:
-                    continue  # Skip invalid week folders
+        # Get all available weeks
+        weeks = storage_service.list_weeks()
         
-        # Sort by last upload time (newest first)
-        history.sort(key=lambda x: x['last_upload'], reverse=True)
+        for week_folder in weeks:
+            try:
+                # Parse week date
+                week_date = datetime.strptime(week_folder, "%m_%d_%Y")
+                
+                # Get properties for this week
+                properties = storage_service.list_properties(week_folder)
+                
+                for prop_folder in properties:
+                    # Get files for this property/week
+                    files = storage_service.list_files(week_folder, prop_folder)
+                    
+                    if files:
+                        # For S3, we can't easily get modification times, so use current time
+                        # In a real implementation, you might store metadata or use S3 object timestamps
+                        latest_time = datetime.now()  # Simplified - could be enhanced with S3 object metadata
+                        
+                        history.append({
+                            'property_name': prop_folder,
+                            'week': week_folder,
+                            'week_date': week_date,
+                            'file_count': len(files),
+                            'last_upload': latest_time,
+                            'files': files
+                        })
+            except ValueError:
+                continue  # Skip invalid week folders
+        
+        # Sort by week date (newest first) since we can't get accurate upload times
+        history.sort(key=lambda x: x['week_date'], reverse=True)
         
         # Filter by property if specified
         if property_name:
@@ -356,33 +305,11 @@ def get_upload_history(property_name: str = None, limit: int = 10) -> List[Dict[
 
 def cleanup_old_backups(days_old: int = 30) -> int:
     """
-    Clean up old backup files
+    Clean up old backup files - S3 versioning handles this automatically
     """
-    base_path = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
-    cleaned_count = 0
-    
-    try:
-        for root, dirs, files in os.walk(base_path):
-            for file in files:
-                if '.backup_' in file:
-                    file_path = os.path.join(root, file)
-                    # Check file age
-                    file_age = datetime.now() - datetime.fromtimestamp(os.path.getctime(file_path))
-                    if file_age.days > days_old:
-                        os.remove(file_path)
-                        cleaned_count += 1
-    except Exception as e:
-        print(f"Error cleaning up backups: {e}")
-    
-    return cleaned_count
-
-def render_upload_interface():
-    """
-    Main function to render the enhanced upload interface
-    This is the primary entry point for the upload system
-    """
-    handler = EnhancedUploadHandler()
-    handler.render_upload_interface()
+    # S3 versioning and lifecycle policies handle backup cleanup
+    # This function is kept for compatibility but does nothing in S3 mode
+    return 0
 
 # Usage example and backward compatibility
 if __name__ == "__main__":

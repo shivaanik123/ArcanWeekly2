@@ -16,18 +16,17 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         Tuple of (selected_week, selected_property)
     """
     
-    # Arcan Capital logo in sidebar
-    logo_path = "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/arcan-logo.png"
-    if os.path.exists(logo_path):
-        st.sidebar.image(logo_path, use_container_width=True)
-    else:
-        st.sidebar.title("🏠 ARCAN CAPITAL")
+    # Arcan Capital title (logo removed for S3-only deployment)
+    st.sidebar.title("🏠 ARCAN CAPITAL")
     st.sidebar.markdown("---")
     
     # Week selection - simplified
     weeks = available_data.get('weeks', [])
     if not weeks:
-        st.sidebar.error("No data weeks found")
+        st.sidebar.info("📂 No data weeks found - Upload files to get started!")
+        # Show upload interface when no data
+        st.sidebar.markdown("---")
+        render_upload_interface()
         return None, None
     
     selected_week = st.sidebar.selectbox(
@@ -39,7 +38,10 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
     # Property selection - simplified
     properties = available_data.get('properties', [])
     if not properties:
-        st.sidebar.error("No properties found")
+        st.sidebar.info("📂 No properties found - Upload files to get started!")
+        # Show upload interface when no properties
+        st.sidebar.markdown("---")
+        render_upload_interface()
         return selected_week, None
     
     selected_property = st.sidebar.selectbox(
@@ -48,14 +50,14 @@ def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str],
         index=0
     )
     
-    # Enhanced bulk upload interface
-    st.sidebar.markdown("---")
-    render_upload_interface()
-    
     # Show current selection
     if selected_week and selected_property:
         st.sidebar.markdown("---")
         st.sidebar.success(f"**Selected:** {selected_week} - {selected_property}")
+    
+    # Enhanced bulk upload interface - always show at bottom
+    st.sidebar.markdown("---")
+    render_upload_interface()
     
     return selected_week, selected_property
 

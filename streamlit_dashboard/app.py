@@ -434,9 +434,6 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Data path (adjust as needed)
-    DATA_PATH = os.environ.get("DATA_PATH", "/Users/shivaanikomanduri/ArcanClean/data")
-    
     # Handle upload notifications
     if st.session_state.get('upload_complete', False):
         uploaded_properties = st.session_state.get('last_upload_properties', [])
@@ -445,8 +442,8 @@ def main():
         # Clear the notification
         st.session_state.upload_complete = False
     
-    # Load available weeks and properties (refresh after uploads)
-    available_data = get_available_weeks_and_properties(DATA_PATH)
+    # Load available weeks and properties (S3 only)
+    available_data = get_available_weeks_and_properties()
     
     # Use the proper render_sidebar function
     selected_week, selected_property = render_sidebar(available_data)
@@ -458,17 +455,9 @@ def main():
     if selected_property:
         # Map directory name to property key
         property_key = find_property_by_directory_name(selected_property)
-        logo_path = get_property_logo_path(property_key)
-        
-        if logo_path and os.path.exists(logo_path):
-            # Create columns to center the logo - slightly bigger than before
-            col1, col2, col3 = st.columns([3, 2, 3])
-            with col2:
-                st.image(logo_path, use_container_width=True)
-        else:
-            # Fallback to property name as title
-            display_name = get_property_display_name(property_key)
-            st.title(f"{display_name} Dashboard")
+        # Use property name as title (logos removed for S3-only deployment)
+        display_name = get_property_display_name(property_key)
+        st.title(f"{display_name} Dashboard")
     else:
         st.title("Real Estate Property Dashboard")
     
@@ -483,7 +472,8 @@ def main():
             selected_property in st.session_state.get('last_upload_properties', [])):
             st.cache_data.clear()
         
-        data = load_property_data(DATA_PATH, selected_week, selected_property)
+        print(f"🔍 DEBUG: selected_week = '{selected_week}', selected_property = '{selected_property}'")
+        data = load_property_data(selected_week, selected_property)
     
     # If weekly data is missing, continue with empty data (graphs will still work with comprehensive reports)
     if 'error' in data:
@@ -646,98 +636,89 @@ def main():
     debug_info = []
     
     try:
-        debug_info.append(f"Selected property: '{selected_property}'")
+        print(f"🔍 COMPREHENSIVE: Looking for Weekly Report for '{selected_property}' in week '{selected_week}'")
         
-        # Look for comprehensive report for this property
-        reports_path = "/Users/shivaanikomanduri/ArcanClean/data/Comprehensive Reports/Comprehensive Reports"
+        # Look for comprehensive report (Weekly Report) for this property in same week/property folder
+        from utils.s3_service import S3DataService
+        storage_service = S3DataService()
         
-        if os.path.exists(reports_path):
-            # Get all Excel files in the comprehensive reports directory
-            excel_files = [f for f in os.listdir(reports_path) if f.endswith('.xlsx') and not f.startswith('~$')]
-            debug_info.append(f"Found {len(excel_files)} comprehensive reports")
-            debug_info.append(f"Available reports: {[f.replace(' Weekly Report.xlsx', '') for f in excel_files]}")
-            
-            # Find matching comprehensive report
-            matching_report = None
-            for filename in excel_files:
-                # Extract property name from filename (remove " Weekly Report.xlsx" and variants)
-                prop_name = filename.replace(' Weekly Report.xlsx', '').replace(' Weekly Report (1).xlsx', '')
-                
-                # Clean property names for better matching (remove spaces and common words)
-                selected_clean = selected_property.lower().strip().replace(' ', '').replace('apartments', '') if selected_property else ''
-                prop_clean = prop_name.lower().strip().replace(' ', '').replace('apartments', '')
-                
-                # Special case for Woodland Common Apartments
-                if 'woodland' in selected_property.lower() and 'woodland' in prop_name.lower():
-                    matching_report = os.path.join(reports_path, filename)
-                    debug_info.append(f"✅ Found matching report (woodland special): '{prop_name}' → {filename}")
-                    break
-                
-                # Check for exact match, partial match, or core name match
-                if (selected_property and 
-                    (selected_property.lower().strip() == prop_name.lower().strip() or
-                     selected_property.lower().strip() in prop_name.lower() or
-                     prop_name.lower() in selected_property.lower().strip() or
-                     selected_clean in prop_clean or
-                     prop_clean in selected_clean or
-                     len(selected_clean) > 3 and selected_clean[:6] in prop_clean)):
-                    matching_report = os.path.join(reports_path, filename)
-                    debug_info.append(f"✅ Found matching report: '{prop_name}' → {filename}")
-                    break
+        # List all files in the current week/property folder
+        folder_path = f"{selected_week}/{selected_property}"
+        all_files = storage_service.list_files(folder_path)
+        
+        print(f"🔍 COMPREHENSIVE: All files in {folder_path}: {all_files}")
+        
+        # Filter for files containing "Weekly Report"
+        excel_files = [f for f in all_files if 'weekly report' in f.lower() and f.endswith('.xlsx') and not f.startswith('~$')]
+        
+        print(f"🔍 COMPREHENSIVE: Weekly Report files found: {excel_files}")
+        
+        # Use first Weekly Report file found
+        matching_report = None
+        if excel_files:
+            filename = excel_files[0]
+            matching_report = f"{selected_week}/{selected_property}/{filename}"
+            print(f"🔍 COMPREHENSIVE: Using Weekly Report: {filename}")
+            print(f"🔍 COMPREHENSIVE: Full S3 path: {matching_report}")
         else:
-            debug_info.append(f"❌ Comprehensive reports directory not found: {reports_path}")
-            matching_report = None
+            print(f"🔍 COMPREHENSIVE: No Weekly Report files found in {folder_path}")
+            print(f"🔍 COMPREHENSIVE: Files need to contain 'weekly report' (case insensitive)")
         
         if matching_report:
-            debug_info.append(f"Attempting to parse: {matching_report}")
+            print(f"🔍 COMPREHENSIVE: Downloading and parsing: {matching_report}")
             
-            # Use file parser to get the correct parser for this file
+            # Download file from S3 to temp location preserving original filename
+            import tempfile, os
+            temp_dir = tempfile.mkdtemp()
+            original_filename = matching_report.split('/')[-1]  # Get just the filename
+            temp_file_path = os.path.join(temp_dir, original_filename)
+            
+            # Read file from S3 and write to temp file with original name
+            file_content = storage_service.read_file(matching_report)
+            print(f"🔍 COMPREHENSIVE: Downloaded {len(file_content)} bytes from S3")
+            print(f"🔍 COMPREHENSIVE: Temp file: {temp_file_path}")
+            
+            with open(temp_file_path, 'wb') as f:
+                f.write(file_content)
+            
+            # Now use the original parse_file() with preserved filename
             from parsers.file_parser import parse_file
-            comprehensive_data = parse_file(matching_report)
+            comprehensive_data = parse_file(temp_file_path)
             
-            debug_info.append(f"Parse result keys: {list(comprehensive_data.keys()) if isinstance(comprehensive_data, dict) else 'Not a dict'}")
+            # Clean up temp directory
+            import shutil
+            shutil.rmtree(temp_dir)
             
-            if 'error' in comprehensive_data:
-                debug_info.append(f"❌ Parse error: {comprehensive_data['error']}")
-            elif 'historical_data' in comprehensive_data:
-                comprehensive_historical_data = comprehensive_data['historical_data']
-                full_comprehensive_data = comprehensive_data
-                debug_info.append(f"✅ Historical data loaded successfully")
-                if 'weekly_occupancy_data' in comprehensive_historical_data:
-                    debug_info.append(f"✅ Found {len(comprehensive_historical_data['weekly_occupancy_data'])} weeks of data")
+            print(f"🔍 COMPREHENSIVE: Parse result type: {type(comprehensive_data)}")
+            if isinstance(comprehensive_data, dict):
+                print(f"🔍 COMPREHENSIVE: Parse result keys: {list(comprehensive_data.keys())}")
+                
+                if 'error' in comprehensive_data:
+                    print(f"❌ COMPREHENSIVE: Parse error: {comprehensive_data['error']}")
+                elif 'historical_data' in comprehensive_data:
+                    comprehensive_historical_data = comprehensive_data['historical_data']
+                    full_comprehensive_data = comprehensive_data
+                    print(f"✅ COMPREHENSIVE: Historical data loaded successfully")
+                    print(f"🔍 COMPREHENSIVE: Historical data keys: {list(comprehensive_historical_data.keys())}")
+                    if 'weekly_occupancy_data' in comprehensive_historical_data:
+                        print(f"✅ COMPREHENSIVE: Found {len(comprehensive_historical_data['weekly_occupancy_data'])} weeks of occupancy data")
+                    else:
+                        print(f"❌ COMPREHENSIVE: No 'weekly_occupancy_data' key found")
                 else:
-                    debug_info.append("❌ No 'weekly_occupancy_data' in historical_data")
-                    debug_info.append(f"Historical data keys: {list(comprehensive_historical_data.keys())}")
+                    print(f"❌ COMPREHENSIVE: No 'historical_data' key in parsed data")
             else:
-                debug_info.append("❌ No 'historical_data' key in parsed data")
+                print(f"❌ COMPREHENSIVE: Parse result is not a dictionary")
         else:
-            debug_info.append(f"❌ No matching comprehensive report found for '{selected_property}'")
+            print(f"❌ COMPREHENSIVE: No Weekly Report found for {selected_property}")
                 
     except Exception as e:
-        debug_info.append(f"❌ Exception: {str(e)}")
+        print(f"❌ COMPREHENSIVE: Exception occurred: {str(e)}")
         import traceback
-        debug_info.append(f"❌ Traceback: {traceback.format_exc()}")
+        print(f"❌ COMPREHENSIVE: Traceback: {traceback.format_exc()}")
     
-    # Show debug info in an expander
-    with st.expander("🔍 Debug: Historical Data Loading"):
-        for info in debug_info:
-            st.write(info)
+    print(f"🔍 COMPREHENSIVE: Final result - historical_data: {'Found' if comprehensive_historical_data else 'None'}")
     
     render_graphs_section(comprehensive_historical_data, selected_property, full_comprehensive_data)
-    
-    # Show raw data in expander for debugging
-    with st.expander("🔍 Debug: View Raw Data"):
-        st.write("**Historical Data Loading Debug:**")
-        for info in debug_info:
-            st.write(f"- {info}")
-        st.write("**Raw Data:**")
-        st.json({
-            'box_metrics': box_metrics,
-            'unit_counts': unit_counts,
-            'move_metrics': {k: v for k, v in move_metrics.items() if k != 'weekly_schedule'},
-            'projection_data': projection_data,
-            'file_availability': file_availability
-        })
 
 
 if __name__ == "__main__":

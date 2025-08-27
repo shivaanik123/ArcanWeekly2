@@ -161,6 +161,12 @@ FILE_PATTERNS = [
         'identifier': identify_comprehensive_internal_file,
         'parser': parse_comprehensive_internal_report,
         'description': 'Comprehensive Internal Weekly Report (Historical Data)'
+    },
+    {
+        'pattern': 'comprehensive_weekly',
+        'identifier': lambda filename: 'weekly report' in filename.lower(),  # Simple pattern check
+        'parser': parse_comprehensive_internal_report,
+        'description': 'Comprehensive Weekly Report (Property Weekly Report format)'
     }
 ]
 

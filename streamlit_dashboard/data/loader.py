@@ -1,73 +1,82 @@
 """
-Simple data loading for dashboard
+Simple data loading for dashboard with S3 support
 """
 
 import os
 import sys
+import tempfile
 from typing import Dict, Any, List
 
 # Add parent directory to path to import parsers and config
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from parsers.file_parser import parse_directory
+from utils.s3_service import get_storage_service
 
 
 
-def get_available_weeks_and_properties(data_base_path: str) -> Dict[str, List[str]]:
-    """Scan data directory to find available weeks and properties."""
+def get_available_weeks_and_properties(data_base_path: str = None) -> Dict[str, List[str]]:
+    """Scan data directory to find available weeks and properties using S3 or local storage."""
     from config.property_config import get_all_properties, find_property_by_directory_name
     
+    storage_service = get_storage_service()
     available_data = {'weeks': [], 'properties': []}
     
-    if not os.path.exists(data_base_path):
-        return available_data
-        
-    # Scan for week directories (format: MM_DD_YYYY)
-    for item in os.listdir(data_base_path):
-        week_path = os.path.join(data_base_path, item)
-        if os.path.isdir(week_path) and '_' in item:
-            available_data['weeks'].append(item)
+    # Get weeks using storage service
+    weeks = storage_service.list_weeks()
+    available_data['weeks'] = weeks
+    
+    # Get all properties across all weeks
+    properties_set = set()
+    
+    for week in weeks:
+        week_properties = storage_service.list_properties(week)
+        for prop_item in week_properties:
+            # Clean up property name (remove trailing spaces)
+            clean_prop_name = prop_item.strip()
             
-            # Scan for property directories within each week
-            for prop_item in os.listdir(week_path):
-                prop_path = os.path.join(week_path, prop_item)
-                if os.path.isdir(prop_path):
-                    # Clean up property name (remove trailing spaces)
-                    clean_prop_name = prop_item.strip()
-                    
-                    # Map directory name to standard property name to avoid duplicates
-                    standard_property_name = find_property_by_directory_name(clean_prop_name)
-                    if standard_property_name:
-                        clean_prop_name = standard_property_name
-                    
-                    if clean_prop_name not in available_data['properties']:
-                        available_data['properties'].append(clean_prop_name)
+            # Map directory name to standard property name to avoid duplicates
+            standard_property_name = find_property_by_directory_name(clean_prop_name)
+            if standard_property_name:
+                clean_prop_name = standard_property_name
+            
+            properties_set.add(clean_prop_name)
     
     # Add configured properties that might not have directories yet
     all_configured_properties = get_all_properties()
     for prop in all_configured_properties:
-        if prop not in available_data['properties']:
-            available_data['properties'].append(prop)
+        properties_set.add(prop)
     
+    available_data['properties'] = sorted(list(properties_set))
     available_data['weeks'].sort()
-    available_data['properties'].sort()
     
     return available_data
 
-def load_property_data(data_base_path: str, week: str, property_name: str) -> Dict[str, Any]:
-    """Load all data files for a specific week and property."""
-    # First try the exact property name
-    property_path = os.path.join(data_base_path, week, property_name)
+def load_property_data(week: str, property_name: str) -> Dict[str, Any]:
+    """Load all data files for a specific week and property using S3 or local storage."""
+    storage_service = get_storage_service()
     
-    # If that doesn't exist, try with trailing space (common issue)
-    if not os.path.exists(property_path):
-        property_path_with_space = os.path.join(data_base_path, week, property_name + " ")
-        if os.path.exists(property_path_with_space):
-            property_path = property_path_with_space
-        else:
-            return {'error': f"Data not found for {property_name} in week {week}"}
+    # Get list of Excel files for this property/week
+    folder_path = f"{week}/{property_name}"
+    excel_files = storage_service.list_files(folder_path)
+    
+    if not excel_files:
+        # Try with trailing space (common issue) by getting all properties and finding a match
+        all_properties = storage_service.list_properties(week)
+        property_with_space = None
+        
+        for prop in all_properties:
+            if prop.strip() == property_name or prop == property_name + " ":
+                property_with_space = prop
+                break
+        
+        if property_with_space:
+            excel_files = storage_service.list_files(week, property_with_space)
+            property_name = property_with_space  # Use the actual property name
+    
+    if not excel_files:
+        return {'error': f"Data not found for {property_name} in week {week}"}
     
     # Extract property code from filenames (skip backup files)
-    excel_files = [f for f in os.listdir(property_path) if f.endswith('.xlsx') and not f.startswith('~$') and '.backup_' not in f]
     property_code = None
     
     for filename in excel_files:
@@ -83,14 +92,28 @@ def load_property_data(data_base_path: str, week: str, property_name: str) -> Di
         if property_code:
             break
     
-    # Parse all files (use property_code if found, otherwise parse all files)
-    results = parse_directory(property_path, property_filter=property_code)
-    
-    # Organize by parser type
-    organized_data = {'raw_data': {}}
-    
-    for filename, file_data in results['files_parsed'].items():
-        parser_type = file_data['parser_type']
-        organized_data['raw_data'][parser_type] = file_data
-    
-    return organized_data
+    # Create temporary directory to download files for parsing
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_property_path = os.path.join(temp_dir, property_name.strip())
+        os.makedirs(temp_property_path, exist_ok=True)
+        
+        # Download all Excel files to temporary directory
+        for filename in excel_files:
+            file_s3_key = f"{week}/{property_name}/{filename}"
+            file_data = storage_service.read_file(file_s3_key)
+            if file_data:
+                temp_file_path = os.path.join(temp_property_path, filename)
+                with open(temp_file_path, 'wb') as f:
+                    f.write(file_data)
+        
+        # Parse all files using existing parser (use property_code if found, otherwise parse all files)
+        results = parse_directory(temp_property_path, property_filter=property_code)
+        
+        # Organize by parser type
+        organized_data = {'raw_data': {}}
+        
+        for filename, file_data in results['files_parsed'].items():
+            parser_type = file_data['parser_type']
+            organized_data['raw_data'][parser_type] = file_data
+        
+        return organized_data

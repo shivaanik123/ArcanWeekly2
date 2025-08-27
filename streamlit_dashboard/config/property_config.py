@@ -5,9 +5,6 @@ Maps property names to their codes/acronyms and logo files
 
 import os
 
-# Base path for apartment logos
-LOGOS_BASE_PATH = os.environ.get("LOGOS_BASE_PATH", "/Users/shivaanikomanduri/ArcanClean/streamlit_dashboard/logos/Apartment Logos")
-
 # Property mapping with display names, codes, and logo filenames
 PROPERTY_MAPPING = {
     # Longer Template Properties
@@ -136,11 +133,7 @@ PROPERTY_MAPPING = {
 }
 
 def get_property_logo_path(property_key: str) -> str:
-    """Get the full path to a property's logo file."""
-    if property_key in PROPERTY_MAPPING:
-        logo_file = PROPERTY_MAPPING[property_key]["logo_file"]
-        if logo_file:
-            return os.path.join(LOGOS_BASE_PATH, logo_file)
+    """Legacy function - logos removed for S3-only deployment."""
     return None
 
 def get_all_properties() -> list:
