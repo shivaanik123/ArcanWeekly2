@@ -103,31 +103,67 @@ def render_graphs_section(historical_data: Dict[str, Any], property_name: str = 
         st.markdown("### Rent Trends")
         render_rent_trends_chart(comprehensive_data, property_name)
     
-    # Third row: Collections and Maintenance Analytics side by side
-    col5, col6 = st.columns(2)
+    # Third row: Collections and Maintenance Analytics - wider charts
+    st.markdown("### Collections Performance")
+    render_collections_chart(comprehensive_data, property_name)
     
-    with col5:
-        st.markdown("### Collections Performance")
-        render_collections_chart(comprehensive_data, property_name)
-    
-    with col6:
-        # Title with inline dropdown selector
-        title_col, dropdown_col = st.columns([2, 1])
-        with title_col:
-            st.markdown("### Maintenance Analytics")
-        with dropdown_col:
-            time_period = st.selectbox(
-                "Period:",
-                options=["3 Months", "6 Months", "12 Months"],
-                index=0,
-                key="maintenance_time_period_header",
-                label_visibility="collapsed"
-            )
-        render_interactive_maintenance_chart(comprehensive_data, property_name, time_period)
+    # Maintenance Analytics with inline dropdown selector
+    title_col, dropdown_col = st.columns([3, 1])
+    with title_col:
+        st.markdown("### Maintenance Analytics")
+    with dropdown_col:
+        time_period = st.selectbox(
+            "Period:",
+            options=["3 Months", "6 Months", "12 Months"],
+            index=0,
+            key="maintenance_time_period_header",
+            label_visibility="collapsed"
+        )
+    render_interactive_maintenance_chart(comprehensive_data, property_name, time_period)
 
 
 def render_occupancy_trends(df: pd.DataFrame, property_name: str):
     """Render occupancy trend charts as 2D area line graph with blue shades."""
+    
+    print(f"📈 OCCUPANCY TRENDS DEBUG for {property_name}")
+    print(f"📈 DataFrame shape: {df.shape}")
+    print(f"📈 DataFrame columns: {df.columns.tolist()}")
+    
+    if not df.empty:
+        print(f"📈 First few rows:")
+        print(df.head())
+        print(f"📈 Data types:")
+        print(df.dtypes)
+        
+        # Check for required columns
+        required_cols = ['date', 'projected_percentage', 'leased_percentage', 'occupancy_percentage']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            print(f"❌ OCCUPANCY TRENDS: Missing required columns: {missing_cols}")
+            st.error(f"Cannot render occupancy trends - missing columns: {missing_cols}")
+            return
+        else:
+            print(f"✅ OCCUPANCY TRENDS: All required columns present")
+    else:
+        print(f"❌ OCCUPANCY TRENDS: DataFrame is empty!")
+        st.error("Cannot render occupancy trends - no data available")
+        return
+    
+    # Convert decimal values to percentages if needed
+    percentage_cols = ['projected_percentage', 'leased_percentage', 'occupancy_percentage']
+    for col in percentage_cols:
+        if col in df.columns:
+            # Check if values are decimals (between 0-1) and convert to percentages
+            max_val = df[col].max()
+            print(f"📈 Column {col} max value: {max_val}")
+            if max_val <= 1.0 and max_val > 0:
+                print(f"📈 Converting {col} from decimal to percentage")
+                df[col] = df[col] * 100
+    
+    print(f"📈 After percentage conversion - sample values:")
+    for col in percentage_cols:
+        if col in df.columns:
+            print(f"📈 {col}: {df[col].head().tolist()}")
     
     # Create the figure
     fig = go.Figure()
