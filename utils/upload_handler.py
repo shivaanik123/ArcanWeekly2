@@ -1,33 +1,24 @@
-"""
-Enhanced Bulk ETL Report Upload Handler with S3 support
-Supports intelligent file detection, automatic organization by property/date, and bulk uploads
-"""
+"""Bulk ETL Report Upload Handler with S3 support"""
 
 import streamlit as st
 import os
-import shutil
 import sys
 from datetime import datetime, date
-from typing import List, Dict, Any, Optional
-import pandas as pd
+from typing import List, Dict, Any
 
-# Add parent directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from utils.s3_service import get_storage_service
 from config.upload_config import get_upload_properties, validate_filename
 
 class EnhancedUploadHandler:
-    """Enhanced upload handler with intelligent file detection and bulk processing"""
+    """Upload handler for bulk processing"""
     
     def __init__(self):
         self.storage_service = get_storage_service()
     
     def render_upload_interface(self):
-        """Render the complete bulk upload interface in sidebar"""
-        
+        """Render bulk upload interface in sidebar"""
         st.sidebar.header("📤 Bulk Upload")
-        
-        # Property selection (required)
         selected_property = st.sidebar.selectbox(
             "Select Property",
             options=get_upload_properties(),

@@ -1,9 +1,4 @@
-"""
-Main file parser dispatcher for real estate data files.
-
-This module automatically identifies file types based on naming patterns
-and routes them to the appropriate specialized parser.
-"""
+"""Main file parser dispatcher for real estate data files."""
 
 import os
 import re
@@ -21,9 +16,7 @@ class FileAnalysisResult:
     error_message: Optional[str] = None
     suggested_fixes: List[str] = None
 
-# Property code mappings for filename analysis
 PROPERTY_MAPPINGS = {
-    # Standard property codes (primary identifiers)
     '55pharr': {'name': '55 Pharr', 'display': '55 Pharr'},
     'abbeylk': {'name': 'Abbey Lake', 'display': 'Abbey Lake'},
     'capella2': {'name': 'Capella', 'display': 'Capella'},
@@ -44,8 +37,6 @@ PROPERTY_MAPPINGS = {
     'tapeprk': {'name': 'Tapestry Park', 'display': 'Tapestry Park'},
     'turn': {'name': 'The Turn', 'display': 'The Turn'},
     'wdlndcm': {'name': 'Woodland Commons', 'display': 'Woodland Commons'},
-    
-    # Alternative formats for comprehensive reports (secondary identifiers)
     '55 pharr': {'name': '55 Pharr', 'display': '55 Pharr'},
     'abbey lake': {'name': 'Abbey Lake', 'display': 'Abbey Lake'},
     'capella': {'name': 'Capella', 'display': 'Capella'},

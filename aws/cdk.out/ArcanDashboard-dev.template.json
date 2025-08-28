@@ -149,6 +149,11 @@
       "Namespace": "aws:elasticbeanstalk:application:environment",
       "OptionName": "S3_DATA_PREFIX",
       "Value": "data/"
+     },
+     {
+      "Namespace": "aws:elasticbeanstalk:application:environment",
+      "OptionName": "PORT",
+      "Value": "8501"
      }
     ],
     "SolutionStackName": "64bit Amazon Linux 2023 v4.7.1 running Python 3.13",

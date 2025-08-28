@@ -1,8 +1,5 @@
-"""
-Upload configuration with hardcoded property list and file patterns
-"""
+"""Upload configuration with property list and file patterns"""
 
-# Hardcoded property list for upload selection
 UPLOAD_PROPERTIES = [
     "55 Pharr",
     "Abbey Lake", 
@@ -26,7 +23,6 @@ UPLOAD_PROPERTIES = [
     "Woodland Commons"
 ]
 
-# Exact file patterns that must be matched (without property codes)
 REQUIRED_FILE_PATTERNS = {
     "ResAnalytics Box Score Summary": {
         "pattern": "ResAnalytics_Box_Score_Summary_*.xlsx",

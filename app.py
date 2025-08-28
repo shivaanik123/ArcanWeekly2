@@ -1,16 +1,11 @@
-"""
-Main Streamlit Dashboard Application
-"""
+"""Main Streamlit Dashboard Application"""
 
 import streamlit as st
 import sys
 import os
 from datetime import datetime
 
-# Add current directory to path
 sys.path.append(os.path.dirname(__file__))
-
-# Import components and utilities
 from data.loader import get_available_weeks_and_properties, load_property_data
 from utils.calculations import (
     get_box_score_metrics, get_move_schedule, get_unit_counts,
@@ -26,7 +21,6 @@ from components.move_schedule import render_move_schedule
 from components.graphs import render_graphs_section
 from config.property_config import get_property_logo_path, get_property_display_name, find_property_by_directory_name
 
-# Page config - Force sidebar to be visible
 st.set_page_config(
     page_title="Real Estate Dashboard",
     layout="wide",
@@ -36,401 +30,23 @@ st.set_page_config(
 def main():
     """Main dashboard application."""
     
-    # Clean Trading Dashboard CSS
     st.markdown("""
     <style>
-    /* Global Dark Theme */
-    .stApp {
-        background: #0a0e1a !important;
-        color: #ffffff;
-    }
-    
-    .main {
-        background: #0a0e1a !important;
-        color: #ffffff;
-    }
-    
-    /* Headers */
-    .main h1, .main h2, .main h3, .main h4 {
-        color: #ffffff !important;
-        font-weight: 700 !important;
-    }
-    
-    .main h3 {
-        color: #3b82f6 !important;
-        font-size: 1.4rem !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
-        border-bottom: 2px solid #3b82f6 !important;
-        padding-bottom: 8px !important;
-        margin-bottom: 20px !important;
-    }
-    
-    /* Tables */
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #1e293b !important;
-        border-radius: 8px !important;
-        overflow: hidden !important;
-    }
-    
-    .table th {
-        background: #0f172a !important;
-        color: #3b82f6 !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        padding: 12px !important;
-        border-bottom: 2px solid #3b82f6 !important;
-    }
-    
-    .table td {
-        background: #1e293b !important;
-        color: #ffffff !important;
-        padding: 10px 12px !important;
-        border-bottom: 1px solid #475569 !important;
-    }
-    
-    .table-striped tbody tr:nth-of-type(odd) td {
-        background: #334155 !important;
-    }
-    
-    /* Robust sidebar selector for current Streamlit builds */
-    section[data-testid="stSidebar"], aside[data-testid="stSidebar"] {
-        background: #1e293b !important;
-        border-right: 1px solid #4a90e2 !important;
-    }
-    
-    /* Ensure text doesn't wrap weirdly in sidebar when expanded */
-    .stSidebar .stSelectbox label,
-    .stSidebar .stMarkdown,
-    .stSidebar h1,
-    .stSidebar h2,
-    .stSidebar h3 {
-        white-space: normal;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-    
-    /* Main content spacing */
-    .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    
-    /* Keep header so the sidebar toggle is visible */
-    header[data-testid="stHeader"] {
-        background: transparent;
-        box-shadow: none;
-        height: 3rem;        /* slim it down instead of hiding */
-    }
-    
-    /* Dashboard Cards - Content outlined, headers plain */
-    .dashboard-card {
-        background: transparent;
-        border: none;
-        padding: 0;
-        margin: 8px 0;
-    }
-    
-    .dashboard-card-header h3 {
-        color: #ffffff !important;
-        font-size: 1.1rem !important;
-        margin: 0 0 8px 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        text-transform: none !important;
-        letter-spacing: normal !important;
-        background: transparent !important;
-    }
-    
-    .dashboard-card-content {
-        background: rgba(30, 41, 59, 0.8) !important;
-        border: 1px solid rgba(74, 144, 226, 0.3) !important;
-        border-radius: 12px !important;
-        padding: 0 !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
-        color: #ffffff !important;
-        overflow: hidden !important;
-    }
-    
-    .metric-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 20px;
-        border-bottom: 1px solid rgba(74, 144, 226, 0.15);
-        transition: background-color 0.2s ease;
-        min-height: 48px;
-    }
-    
-    .metric-row:first-child {
-        background: rgba(74, 144, 226, 0.1);
-        border-bottom: 2px solid rgba(74, 144, 226, 0.3);
-        font-weight: 600;
-    }
-    
-    .metric-row:last-child {
-        border-bottom: none;
-    }
-    
-    .metric-row:hover:not(:first-child) {
-        background: rgba(74, 144, 226, 0.08);
-    }
-    
-    .metric-label {
-        color: #e2e8f0;
-        font-size: 0.9rem;
-        font-weight: 500;
-        flex: 1;
-    }
-    
-    .metric-row:first-child .metric-label {
-        color: #ffffff;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.5px;
-    }
-    
-    .metric-value {
-        color: #ffffff;
-        font-size: 0.9rem;
-        font-weight: 600;
-        text-align: right;
-        min-width: 60px;
-    }
-    
-    .metric-row:first-child .metric-value {
-        color: #ffffff;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Schedule Table Styling - Matching other tables */
-    .schedule-table {
-        width: 100%;
-        background: rgba(30, 41, 59, 0.8) !important;
-        border: 1px solid rgba(74, 144, 226, 0.3) !important;
-        border-radius: 12px !important;
-        padding: 0 !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
-        color: #ffffff !important;
-        overflow: hidden !important;
-    }
-    
-    .schedule-header {
-        display: flex;
-        background: rgba(74, 144, 226, 0.1);
-        padding: 12px 20px;
-        border-bottom: 2px solid rgba(74, 144, 226, 0.3);
-        font-weight: 600;
-        min-height: 48px;
-        align-items: center;
-    }
-    
-    .schedule-row {
-        display: flex;
-        padding: 12px 20px;
-        border-bottom: 1px solid rgba(74, 144, 226, 0.15);
-        transition: background-color 0.2s ease;
-        min-height: 48px;
-        align-items: center;
-    }
-    
-    .schedule-row:last-child {
-        border-bottom: none;
-    }
-    
-    .schedule-row:hover {
-        background: rgba(74, 144, 226, 0.08);
-    }
-    
-    /* Schedule table - simplified grid layout */
-    .schedule-header-row,
-    .schedule-data-row {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-        gap: 8px;
-        align-items: center;
-        padding: 12px 16px !important;
-        min-height: 48px;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    
-    .schedule-header-row {
-        background: rgba(74, 144, 226, 0.1) !important;
-        border-bottom: 2px solid rgba(74, 144, 226, 0.3) !important;
-        font-weight: 600;
-    }
-    
-    .schedule-data-row {
-        border-bottom: 1px solid rgba(74, 144, 226, 0.15) !important;
-        transition: background-color 0.2s ease;
-    }
-    
-    .schedule-data-row:hover {
-        background: rgba(74, 144, 226, 0.08) !important;
-    }
-    
-    .schedule-data-row:last-child {
-        border-bottom: none !important;
-    }
-    
-    .schedule-col {
-        text-align: center;
-        color: #ffffff;
-        font-size: 0.8rem;
-        font-weight: 500;
-        padding: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        min-width: 0;
-    }
-    
-    .schedule-header-row .schedule-col {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Simple Schedule Table */
-    .simple-schedule-table {
-        width: 100%;
-        display: table;
-        border-collapse: collapse;
-    }
-    
-    .simple-row {
-        display: table-row;
-    }
-    
-    .simple-cell {
-        display: table-cell;
-        padding: 12px 8px;
-        text-align: center;
-        color: #ffffff;
-        font-size: 0.85rem;
-        font-weight: 500;
-        border-bottom: 1px solid rgba(74, 144, 226, 0.15);
-        vertical-align: middle;
-        width: 20%;
-    }
-    
-    .simple-header {
-        background: rgba(74, 144, 226, 0.1) !important;
-    }
-    
-    .simple-header .simple-cell {
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.5px;
-        border-bottom: 2px solid rgba(74, 144, 226, 0.3);
-        color: #ffffff;
-    }
-    
-    .simple-row:hover .simple-cell {
-        background: rgba(74, 144, 226, 0.08);
-    }
-    
-    .simple-row:last-child .simple-cell {
-        border-bottom: none;
-    }
-    
-    /* Scrollable Schedule Container */
-    .scrollable-schedule-container {
-        overflow-x: auto;
-        max-width: 100%;
-    }
-    
-    .scrollable-schedule-container .metric-row {
-        display: flex;
-        min-width: 500px; /* Minimum width to ensure all columns are visible */
-        align-items: center;
-        padding: 12px 20px;
-        border-bottom: 1px solid rgba(74, 144, 226, 0.15);
-        transition: background-color 0.2s ease;
-        min-height: 48px;
-    }
-    
-    .scrollable-schedule-container .metric-row:first-child {
-        background: rgba(74, 144, 226, 0.1) !important;
-        border-bottom: 2px solid rgba(74, 144, 226, 0.3) !important;
-        font-weight: 600;
-    }
-    
-    .scrollable-schedule-container .metric-row:hover:not(:first-child) {
-        background: rgba(74, 144, 226, 0.08) !important;
-    }
-    
-    .scrollable-schedule-container .metric-row:last-child {
-        border-bottom: none !important;
-    }
-    
-    .scrollable-schedule-container .metric-label,
-    .scrollable-schedule-container .metric-value {
-        flex: 1;
-        text-align: center;
-        min-width: 80px;
-        padding: 0 8px;
-        white-space: nowrap;
-    }
-    
-    .scrollable-schedule-container .metric-row:first-child .metric-label {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        text-transform: uppercase !important;
-        font-size: 0.8rem !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .schedule-footer {
-        margin: 8px 20px 12px 20px;
-        color: #9ca3af;
-        font-size: 0.75rem;
-        font-style: italic;
-        text-align: center;
-        padding-bottom: 8px;
-    }
-    
-    /* Legend styling */
-    .schedule-legend {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin: 12px 20px 8px 20px;
-        padding: 8px 0;
-        border-top: 1px solid rgba(74, 144, 226, 0.1);
-    }
-    
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        color: #e2e8f0;
-        font-size: 0.8rem;
-        font-weight: 500;
-    }
-    
-    .legend-symbol {
-        color: #74b9ff;
-        font-weight: 600;
-        font-size: 1rem;
-    }
-    
-    .legend-text {
-        color: #e2e8f0;
-    }
+    .stApp { background: #0a0e1a !important; color: #ffffff; }
+    .main { background: #0a0e1a !important; color: #ffffff; }
+    .main h1, .main h2, .main h3, .main h4 { color: #ffffff !important; font-weight: 700 !important; }
+    .main h3 { color: #3b82f6 !important; font-size: 1.4rem !important; text-transform: uppercase !important; 
+               border-bottom: 2px solid #3b82f6 !important; padding-bottom: 8px !important; margin-bottom: 20px !important; }
+    section[data-testid="stSidebar"], aside[data-testid="stSidebar"] { background: #1e293b !important; border-right: 1px solid #4a90e2 !important; }
+    header[data-testid="stHeader"] { background: transparent; box-shadow: none; height: 3rem; }
+    .dashboard-card-content { background: rgba(30, 41, 59, 0.8) !important; border: 1px solid rgba(74, 144, 226, 0.3) !important; 
+                             border-radius: 12px !important; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important; overflow: hidden !important; }
+    .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; 
+                  border-bottom: 1px solid rgba(74, 144, 226, 0.15); min-height: 48px; }
+    .metric-row:first-child { background: rgba(74, 144, 226, 0.1); border-bottom: 2px solid rgba(74, 144, 226, 0.3); font-weight: 600; }
+    .metric-row:hover:not(:first-child) { background: rgba(74, 144, 226, 0.08); }
+    .metric-label { color: #e2e8f0; font-size: 0.9rem; font-weight: 500; flex: 1; }
+    .metric-value { color: #ffffff; font-size: 0.9rem; font-weight: 600; text-align: right; min-width: 60px; }
     </style>
     """, unsafe_allow_html=True)
     
@@ -719,7 +335,6 @@ def main():
     print(f"🔍 COMPREHENSIVE: Final result - historical_data: {'Found' if comprehensive_historical_data else 'None'}")
     
     render_graphs_section(comprehensive_historical_data, selected_property, full_comprehensive_data)
-
 
 if __name__ == "__main__":
     main()

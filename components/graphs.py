@@ -11,31 +11,19 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 def render_graphs_section(historical_data: Dict[str, Any], property_name: str = "Property", comprehensive_data: Dict[str, Any] = None):
-    """
-    Render graphs section with historical trends and analytics.
+    """Render graphs section with historical trends and analytics."""
     
-    Args:
-        historical_data: Dictionary containing historical data from comprehensive reports
-        property_name: Name of the property for titles
-    """
-    
-    
-    # Check if we have historical data
     weekly_data = []
     if historical_data and 'weekly_occupancy_data' in historical_data:
         weekly_data = historical_data['weekly_occupancy_data']
     
-    # If no weekly data, try to create simple occupancy chart from current comprehensive data
     if not weekly_data and comprehensive_data:
         current_week = comprehensive_data.get('current_week_data', {})
         if current_week and current_week.get('occupied_units', 0) > 0:
-            # Use the occupancy_percentage directly from the parser
             occupancy_pct = current_week.get('occupancy_percentage', 0)
             total_units = current_week.get('occupied_units', 0) + current_week.get('vacant_units', 0)
-            
-            # Create a simple single-point data for current occupancy
             weekly_data = [{
-                'date': '2025-08-24',  # Current date
+                'date': '2025-08-24',
                 'week': 'Current',
                 'occupancy_percentage': occupancy_pct,
                 'occupied_units': current_week.get('occupied_units', 0),
@@ -44,11 +32,7 @@ def render_graphs_section(historical_data: Dict[str, Any], property_name: str = 
                 'make_readies_count': 0
             }]
         else:
-            # Last resort: create a dummy chart to show that data exists but needs parsing
             st.info(f"📊 Found comprehensive report data for {property_name}, but occupancy details need better parsing.")
-            st.write(f"Debug: Available data keys: {list(comprehensive_data.keys())}")
-            if 'current_week_data' in comprehensive_data:
-                st.write(f"Current week data: {comprehensive_data['current_week_data']}")
             return
     
     if not weekly_data:
@@ -125,45 +109,20 @@ def render_graphs_section(historical_data: Dict[str, Any], property_name: str = 
 def render_occupancy_trends(df: pd.DataFrame, property_name: str):
     """Render occupancy trend charts as 2D area line graph with blue shades."""
     
-    print(f"📈 OCCUPANCY TRENDS DEBUG for {property_name}")
-    print(f"📈 DataFrame shape: {df.shape}")
-    print(f"📈 DataFrame columns: {df.columns.tolist()}")
-    
-    if not df.empty:
-        print(f"📈 First few rows:")
-        print(df.head())
-        print(f"📈 Data types:")
-        print(df.dtypes)
-        
-        # Check for required columns
-        required_cols = ['date', 'projected_percentage', 'leased_percentage', 'occupancy_percentage']
-        missing_cols = [col for col in required_cols if col not in df.columns]
-        if missing_cols:
-            print(f"❌ OCCUPANCY TRENDS: Missing required columns: {missing_cols}")
-            st.error(f"Cannot render occupancy trends - missing columns: {missing_cols}")
-            return
-        else:
-            print(f"✅ OCCUPANCY TRENDS: All required columns present")
-    else:
-        print(f"❌ OCCUPANCY TRENDS: DataFrame is empty!")
+    if df.empty:
         st.error("Cannot render occupancy trends - no data available")
         return
+        
+    required_cols = ['date', 'projected_percentage', 'leased_percentage', 'occupancy_percentage']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        st.error(f"Cannot render occupancy trends - missing columns: {missing_cols}")
+        return
     
-    # Convert decimal values to percentages if needed
     percentage_cols = ['projected_percentage', 'leased_percentage', 'occupancy_percentage']
     for col in percentage_cols:
-        if col in df.columns:
-            # Check if values are decimals (between 0-1) and convert to percentages
-            max_val = df[col].max()
-            print(f"📈 Column {col} max value: {max_val}")
-            if max_val <= 1.0 and max_val > 0:
-                print(f"📈 Converting {col} from decimal to percentage")
-                df[col] = df[col] * 100
-    
-    print(f"📈 After percentage conversion - sample values:")
-    for col in percentage_cols:
-        if col in df.columns:
-            print(f"📈 {col}: {df[col].head().tolist()}")
+        if col in df.columns and df[col].max() <= 1.0 and df[col].max() > 0:
+            df[col] = df[col] * 100
     
     # Create the figure
     fig = go.Figure()

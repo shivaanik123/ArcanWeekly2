@@ -15,8 +15,6 @@ class S3DataService:
     """S3-only service for file operations"""
     
     def __init__(self):
-        # S3-only mode
-        self.use_s3 = True
         self.bucket_name = os.environ.get("S3_BUCKET_NAME")
         self.s3_prefix = os.environ.get("S3_DATA_PREFIX", "data/")
         
@@ -24,46 +22,33 @@ class S3DataService:
             raise ValueError("S3_BUCKET_NAME environment variable is required")
         
         try:
-            # Initialize S3 client
             self.s3_client = boto3.client(
                 's3',
                 aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                 region_name=os.environ.get("AWS_REGION", "us-east-1")
             )
-            
-            # Test S3 connectivity
             self.s3_client.head_bucket(Bucket=self.bucket_name)
-            
         except (ClientError, NoCredentialsError) as e:
             raise ConnectionError(f"Failed to connect to S3: {str(e)}")
     
     def list_weeks(self) -> List[str]:
         """List available week directories (MM_DD_YYYY format)"""
-        
         try:
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
                 Prefix=self.s3_prefix,
                 Delimiter='/'
             )
-            
             weeks = []
             for prefix_info in response.get('CommonPrefixes', []):
                 prefix = prefix_info['Prefix']
-                # Extract week name from prefix (remove data/ prefix and trailing /)
                 week_name = prefix.replace(self.s3_prefix, '').rstrip('/')
-                
-                # Only include directories that look like weeks (MM_DD_YYYY format or contain underscore)
                 if '_' in week_name and not week_name.startswith('.'):
                     weeks.append(week_name)
-            
-            # Sort weeks by date (assuming MM_DD_YYYY format)
             weeks.sort()
             return weeks
-            
-        except ClientError as e:
-            print(f"Error listing weeks from S3: {e}")
+        except ClientError:
             return []
     
     def list_properties(self, week: str) -> List[str]:
@@ -89,8 +74,7 @@ class S3DataService:
             properties.sort()
             return properties
             
-        except ClientError as e:
-            print(f"Error listing properties from S3: {e}")
+        except ClientError:
             return []
     
     def list_files(self, folder_path: str) -> List[str]:
@@ -103,19 +87,12 @@ class S3DataService:
             else:
                 s3_prefix = f"{self.s3_prefix}{folder_path}/"
             
-            print(f"🔍 list_files() called with folder_path: '{folder_path}'")
-            print(f"🔍 S3 prefix: '{self.s3_prefix}'")
-            print(f"🔍 Final s3_prefix for search: '{s3_prefix}'")
-            print(f"🔍 Bucket: '{self.bucket_name}'")
             
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
                 Prefix=s3_prefix
             )
             
-            print(f"🔍 S3 response contains {len(response.get('Contents', []))} objects")
-            for obj in response.get('Contents', [])[:5]:  # Show first 5 objects
-                print(f"🔍   Object key: '{obj['Key']}'")
             
             files = []
             for obj in response.get('Contents', []):
@@ -126,11 +103,9 @@ class S3DataService:
                 if filename and '/' not in filename:  # Only direct files, not subdirectories
                     files.append(filename)
             
-            print(f"🔍 Filtered files found: {files}")
             return files
             
-        except ClientError as e:
-            print(f"Error listing files from S3: {e}")
+        except ClientError:
             return []
     
     def read_file(self, s3_key: str) -> bytes:
@@ -144,8 +119,7 @@ class S3DataService:
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=s3_key)
             return response['Body'].read()
             
-        except ClientError as e:
-            print(f"Error reading file from S3 {s3_key}: {e}")
+        except ClientError:
             raise FileNotFoundError(f"File not found in S3: {s3_key}")
     
     def write_file(self, s3_key: str, content: bytes) -> bool:
@@ -163,8 +137,7 @@ class S3DataService:
             )
             return True
             
-        except ClientError as e:
-            print(f"Error writing file to S3: {e}")
+        except ClientError:
             return False
     
     def file_exists(self, s3_key: str) -> bool:
@@ -202,8 +175,7 @@ class S3DataService:
             )
             return True
             
-        except ClientError as e:
-            print(f"Error creating backup in S3: {e}")
+        except ClientError:
             return False
     
     def get_storage_info(self) -> Dict[str, Any]:
