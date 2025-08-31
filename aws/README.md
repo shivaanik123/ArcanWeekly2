@@ -77,7 +77,6 @@ zip -r arcan-dashboard-$VERSION.zip . -x "*.git*" "*/__pycache__/*" "*.pyc" ".ve
 ## Environment Configuration
 
 The CDK automatically sets these environment variables in Elastic Beanstalk:
-- `USE_S3_STORAGE=true`
 - `S3_BUCKET_NAME=your-bucket-name`
 - `S3_DATA_PREFIX=data/`
 - `AWS_REGION=your-region`

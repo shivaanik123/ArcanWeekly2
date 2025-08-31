@@ -105,12 +105,6 @@ class ArcanDashboardStack(Stack):
                 option_name="IamInstanceProfile",
                 value=self.instance_profile.ref
             ),
-            # S3 configuration
-            eb.CfnEnvironment.OptionSettingProperty(
-                namespace="aws:elasticbeanstalk:application:environment",
-                option_name="USE_S3_STORAGE",
-                value="true"
-            ),
             eb.CfnEnvironment.OptionSettingProperty(
                 namespace="aws:elasticbeanstalk:application:environment",
                 option_name="S3_BUCKET_NAME",
