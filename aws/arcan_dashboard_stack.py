@@ -120,12 +120,7 @@ class ArcanDashboardStack(Stack):
                 namespace="aws:elasticbeanstalk:application:environment",
                 option_name="S3_DATA_PREFIX",
                 value="data/"
-            ),
-            eb.CfnEnvironment.OptionSettingProperty(
-                namespace="aws:elasticbeanstalk:application:environment",
-                option_name="PORT",
-                value="8501"
-            ),
+            )
         ]
 
         # Create environment
