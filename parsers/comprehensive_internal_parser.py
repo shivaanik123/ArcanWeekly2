@@ -1,9 +1,4 @@
-"""
-Parser for Comprehensive Internal Reports (2-sheet format)
-
-Examples: Marbella, Abbey Lake, Woodland Common, etc.
-Sheets: ['Occupancy', 'Financial']
-"""
+"""Parser for Comprehensive Internal Reports (2-sheet format)"""
 
 import pandas as pd
 import re
@@ -12,15 +7,7 @@ from datetime import datetime
 
 
 def parse_comprehensive_internal_report(file_path: str) -> Dict[str, Any]:
-    """
-    Parse comprehensive internal report with Occupancy and Financial sheets.
-    
-    Args:
-        file_path: Path to the Excel file
-        
-    Returns:
-        Dictionary containing parsed data with metadata and historical trends
-    """
+    """Parse comprehensive internal report with Occupancy and Financial sheets."""
     
     result = {
         'metadata': {},

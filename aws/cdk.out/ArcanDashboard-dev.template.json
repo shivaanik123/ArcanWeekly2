@@ -1,0 +1,239 @@
+{
+ "Description": "Arcan Property Dashboard - dev environment",
+ "Resources": {
+  "DataBucketE3889A50": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketName": {
+     "Fn::Join": [
+      "",
+      [
+       "arcan-dashboard-data-dev-",
+       {
+        "Ref": "AWS::AccountId"
+       }
+      ]
+     ]
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/DataBucket/Resource"
+   }
+  },
+  "EBServiceRole8FAE8791": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "elasticbeanstalk.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/AdministratorAccess"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/EBServiceRole/Resource"
+   }
+  },
+  "EC2InstanceRole0BAA8CDD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ec2.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/AdministratorAccess"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/EC2InstanceRole/Resource"
+   }
+  },
+  "EC2InstanceProfile": {
+   "Type": "AWS::IAM::InstanceProfile",
+   "Properties": {
+    "Roles": [
+     {
+      "Ref": "EC2InstanceRole0BAA8CDD"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/EC2InstanceProfile"
+   }
+  },
+  "ArcanDashboardApp": {
+   "Type": "AWS::ElasticBeanstalk::Application",
+   "Properties": {
+    "ApplicationName": "arcan-dashboard-dev",
+    "Description": "Arcan Property Dashboard - dev environment"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/ArcanDashboardApp"
+   }
+  },
+  "ArcanDashboardEnv": {
+   "Type": "AWS::ElasticBeanstalk::Environment",
+   "Properties": {
+    "ApplicationName": {
+     "Ref": "ArcanDashboardApp"
+    },
+    "EnvironmentName": "arcan-dashboard-dev",
+    "OptionSettings": [
+     {
+      "Namespace": "aws:autoscaling:launchconfiguration",
+      "OptionName": "InstanceType",
+      "Value": "t3.small"
+     },
+     {
+      "Namespace": "aws:autoscaling:launchconfiguration",
+      "OptionName": "IamInstanceProfile",
+      "Value": {
+       "Ref": "EC2InstanceProfile"
+      }
+     },
+     {
+      "Namespace": "aws:elasticbeanstalk:application:environment",
+      "OptionName": "USE_S3_STORAGE",
+      "Value": "true"
+     },
+     {
+      "Namespace": "aws:elasticbeanstalk:application:environment",
+      "OptionName": "S3_BUCKET_NAME",
+      "Value": {
+       "Ref": "DataBucketE3889A50"
+      }
+     },
+     {
+      "Namespace": "aws:elasticbeanstalk:application:environment",
+      "OptionName": "S3_DATA_PREFIX",
+      "Value": "data/"
+     }
+    ],
+    "SolutionStackName": "64bit Amazon Linux 2023 v4.7.1 running Python 3.13",
+    "Tier": {
+     "Name": "WebServer",
+     "Type": "Standard"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/ArcanDashboardEnv"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/zWNQQ6CMBBFz+K+jCAnUOLClQQPYEod4kiZknYqMU3vbgi6+i/v5+cfoCpLKHd6CYV5jIWlHtJNtBmVXsI9hRrSKZoRRTUDb5QV6QlS5yyu8p8XDqLZYOvdQBazQquDkOlRr40dITUDH+fZktFCjtfRmd/kHU/IkvMqrlHmKKrD4KI328GPs2o/8nS8r6GqoN69AlHhIwtNCN2WXyB3PgrQAAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ArcanDashboard-dev/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "DataBucketName": {
+   "Description": "S3 bucket for dashboard data storage",
+   "Value": {
+    "Ref": "DataBucketE3889A50"
+   }
+  },
+  "EnvironmentURL": {
+   "Description": "Elastic Beanstalk environment URL (add custom domain later)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "ArcanDashboardEnv",
+        "EndpointURL"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "EnvironmentName": {
+   "Description": "Environment name for EB CLI deployment",
+   "Value": {
+    "Ref": "ArcanDashboardEnv"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

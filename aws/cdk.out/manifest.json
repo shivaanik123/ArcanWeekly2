@@ -1,0 +1,119 @@
+{
+  "version": "34.0.0",
+  "artifacts": {
+    "ArcanDashboard-dev.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ArcanDashboard-dev.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ArcanDashboard-dev": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/us-east-1",
+      "properties": {
+        "templateFile": "ArcanDashboard-dev.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1/e6d9d9b888b6fc3ba9b2f88dfd42900a4f3ded6566cd806096b8ebb1373ba963.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ArcanDashboard-dev.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ArcanDashboard-dev.assets"
+      ],
+      "metadata": {
+        "/ArcanDashboard-dev/DataBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DataBucketE3889A50"
+          }
+        ],
+        "/ArcanDashboard-dev/DataBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DataBucketName"
+          }
+        ],
+        "/ArcanDashboard-dev/EBServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EBServiceRole8FAE8791"
+          }
+        ],
+        "/ArcanDashboard-dev/EC2InstanceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EC2InstanceRole0BAA8CDD"
+          }
+        ],
+        "/ArcanDashboard-dev/EC2InstanceProfile": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EC2InstanceProfile"
+          }
+        ],
+        "/ArcanDashboard-dev/ArcanDashboardApp": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ArcanDashboardApp"
+          }
+        ],
+        "/ArcanDashboard-dev/ArcanDashboardEnv": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ArcanDashboardEnv"
+          }
+        ],
+        "/ArcanDashboard-dev/EnvironmentURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EnvironmentURL"
+          }
+        ],
+        "/ArcanDashboard-dev/EnvironmentName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EnvironmentName"
+          }
+        ],
+        "/ArcanDashboard-dev/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ArcanDashboard-dev/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ArcanDashboard-dev/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ArcanDashboard-dev"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}
