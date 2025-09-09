@@ -1,0 +1,20 @@
+{
+  "version": "34.0.0",
+  "files": {
+    "e6d9d9b888b6fc3ba9b2f88dfd42900a4f3ded6566cd806096b8ebb1373ba963": {
+      "source": {
+        "path": "ArcanDashboard-dev.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-us-east-1": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1",
+          "objectKey": "e6d9d9b888b6fc3ba9b2f88dfd42900a4f3ded6566cd806096b8ebb1373ba963.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
