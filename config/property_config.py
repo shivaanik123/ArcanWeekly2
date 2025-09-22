@@ -17,7 +17,7 @@ PROPERTY_MAPPING = {
     "Tapestry Park": {
         "display_name": "Tapestry Park", 
         "property_code": "tapeprk",
-        "logo_file": "Tapestry Logo.jpg",
+        "logo_file": "Tapestry Logo.png",
         "directory_names": ["Tapestry", "Tapestry Park", "tapeprk"]
     },
     "Haven": {
@@ -35,7 +35,7 @@ PROPERTY_MAPPING = {
     "Tall Oaks": {
         "display_name": "Tall Oaks",
         "property_code": "talloak", 
-        "logo_file": "Tall Oaks Logo.png",  # No logo file found for Tall Oaks
+        "logo_file": None,  # No logo file available for Tall Oaks
         "directory_names": ["Tall Oaks", "talloak"]
     },
     "Colony Woods": {
@@ -127,7 +127,7 @@ PROPERTY_MAPPING = {
     "The Hangar": {
         "display_name": "The Hangar",
         "property_code": "hangar",
-        "logo_file": "Hangar Logo.png",
+        "logo_file": "Hangar.png",
         "directory_names": ["Hangar", "The Hangar", "hangar"]
     }
 }
@@ -141,7 +141,7 @@ def get_property_logo_path(property_key: str) -> str:
     CDN_BASE_URL = os.environ.get('CDN_BASE_URL', './logos')
     logo_file = PROPERTY_MAPPING[property_key].get("logo_file")
     
-    if logo_file:
+    if logo_file and logo_file is not None:
         return f"{CDN_BASE_URL}/Apartment Logos/{logo_file}"
     return None
 
