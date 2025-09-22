@@ -9,6 +9,11 @@ PAGE_ICON = "🏢"
 # Data paths
 DATA_BASE_PATH = "../data"
 
+# CDN Configuration
+# Set CDN_BASE_URL environment variable to use S3 bucket for logos
+# Example: export CDN_BASE_URL="https://arcan-dashboard-data-dev-408312670144.s3.amazonaws.com/logos"
+# Default fallback: "./logos" (local files)
+
 # KPI thresholds
 PROJECTION_THRESHOLDS = {
     'ALERT': 0.90,
