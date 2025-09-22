@@ -35,7 +35,7 @@ PROPERTY_MAPPING = {
     "Tall Oaks": {
         "display_name": "Tall Oaks",
         "property_code": "talloak", 
-        "logo_file": None,  # No logo file available for Tall Oaks
+        "logo_file": "Tall Oaks Logo.png",
         "directory_names": ["Tall Oaks", "talloak"]
     },
     "Colony Woods": {
