@@ -25,11 +25,15 @@ def render_kpi_cards(metrics: Dict[str, Any]):
         border-radius: 8px;
         padding: 16px;
         margin: 4px;
-        min-height: 85px;
+        min-height: 120px;
+        height: 120px;
         text-align: center;
         box-shadow: 0 0 12px rgba(74, 144, 226, 0.2);
         transition: all 0.2s ease;
         color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
     
     .trading-kpi-card-status-good {
@@ -37,6 +41,11 @@ def render_kpi_cards(metrics: Dict[str, Any]):
         border: 2px solid #22c55e !important;
         color: white !important;
         box-shadow: 0 0 15px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.1) !important;
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-card-status-watch {
@@ -44,6 +53,11 @@ def render_kpi_cards(metrics: Dict[str, Any]):
         border: 2px solid #eab308 !important;
         color: white !important;
         box-shadow: 0 0 15px rgba(234, 179, 8, 0.5), inset 0 0 20px rgba(234, 179, 8, 0.1) !important;
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-card-status-alert {
@@ -51,22 +65,47 @@ def render_kpi_cards(metrics: Dict[str, Any]):
         border: 2px solid #ef4444 !important;
         color: white !important;
         box-shadow: 0 0 15px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.1) !important;
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-card-dark {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-card-purple {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-card-blue {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-card-black {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        min-height: 120px !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
     
     .trading-kpi-label {
@@ -100,6 +139,10 @@ def render_kpi_cards(metrics: Dict[str, Any]):
         background: #ef4444 !important;
     }
     
+    .trend-positive {
+        background: #22c55e !important;
+    }
+    
     .status-subtitle {
         font-size: 11px;
         opacity: 0.7;
@@ -112,7 +155,115 @@ def render_kpi_cards(metrics: Dict[str, Any]):
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        # Status card - determine color based on status
+        # Percent Occupied (moved to first position)
+        if occupied >= 95:
+            occ_trend = "excellent"
+            occ_trend_class = "trend-positive"
+        elif occupied >= 90:
+            occ_trend = "good"
+            occ_trend_class = "trend-positive"
+        elif occupied >= 85:
+            occ_trend = "fair"
+            occ_trend_class = "trend-negative"
+        else:
+            occ_trend = "needs attention"
+            occ_trend_class = "trend-negative"
+        delta_html = f'<div class="trading-kpi-trend {occ_trend_class}">{occ_trend}</div>'
+        
+        st.markdown(f"""
+        <div class="trading-kpi-card trading-kpi-card-blue">
+            <div class="trading-kpi-header">
+                <div class="trading-kpi-label">% OCCUPIED</div>
+            </div>
+            <div class="trading-kpi-value">{occupied:.1f}%</div>
+            {delta_html}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        # Percent Leased (moved to second position)
+        leased_display = f"{leased:.1f}%"
+        if leased >= 95:
+            leased_trend = "strong"
+            leased_trend_class = "trend-positive"
+        elif leased >= 90:
+            leased_trend = "good"
+            leased_trend_class = "trend-positive"
+        elif leased >= 85:
+            leased_trend = "moderate"
+            leased_trend_class = "trend-negative"
+        else:
+            leased_trend = "low"
+            leased_trend_class = "trend-negative"
+        delta_html = f'<div class="trading-kpi-trend {leased_trend_class}">{leased_trend}</div>'
+        
+        st.markdown(f"""
+        <div class="trading-kpi-card trading-kpi-card-purple">
+            <div class="trading-kpi-header">
+                <div class="trading-kpi-label">% LEASED</div>
+            </div>
+            <div class="trading-kpi-value">{leased_display}</div>
+            {delta_html}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        # Projected percentage (moved to third position)
+        if projection >= 95:
+            proj_trend = "on target"
+            trend_class = "trend-positive"
+        elif projection >= 90:
+            proj_trend = "trending up"
+            trend_class = "trend-positive"
+        elif projection >= 85:
+            proj_trend = "below target"
+            trend_class = "trend-negative"
+        else:
+            proj_trend = "critical"
+            trend_class = "trend-negative"
+        delta_html = f'<div class="trading-kpi-trend {trend_class}">{proj_trend}</div>'
+        
+        st.markdown(f"""
+        <div class="trading-kpi-card trading-kpi-card-dark">
+            <div class="trading-kpi-header">
+                <div class="trading-kpi-label">PROJECTED</div>
+            </div>
+            <div class="trading-kpi-value">{projection:.1f}%</div>
+            {delta_html}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        # Collections Rate (moved to fourth position)
+        if collections >= 95:
+            collections_trend = "excellent"
+            collections_trend_class = "trend-positive"
+        elif collections >= 90:
+            collections_trend = "good"
+            collections_trend_class = "trend-positive"
+        elif collections >= 80:
+            collections_trend = "acceptable"
+            collections_trend_class = "trend-negative"
+        elif collections > 0:
+            collections_trend = "poor"
+            collections_trend_class = "trend-negative"
+        else:
+            collections_trend = "no data"
+            collections_trend_class = "trend-negative"
+        delta_html = f'<div class="trading-kpi-trend {collections_trend_class}">{collections_trend}</div>'
+        
+        st.markdown(f"""
+        <div class="trading-kpi-card trading-kpi-card-black">
+            <div class="trading-kpi-header">
+                <div class="trading-kpi-label">COLLECTIONS RATE</div>
+            </div>
+            <div class="trading-kpi-value">{collections:.1f}%</div>
+            {delta_html}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col5:
+        # Status card (moved to last position)
         if status.upper() == 'GOOD':
             status_class = "trading-kpi-card-status-good"
             status_subtitle = "performing well"
@@ -133,70 +284,5 @@ def render_kpi_cards(metrics: Dict[str, Any]):
             </div>
             <div class="trading-kpi-value">{status}</div>
             <div class="status-subtitle">{status_subtitle}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        # Projected percentage
-        proj_trend = "-1.4% from last" if projection < 100 else "+1.4% from last"
-        trend_class = "trend-negative" if projection < 100 else "trend-positive"
-        delta_html = f'<div class="trading-kpi-trend {trend_class}">{proj_trend}</div>'
-        
-        st.markdown(f"""
-        <div class="trading-kpi-card trading-kpi-card-dark">
-            <div class="trading-kpi-header">
-                <div class="trading-kpi-label">PROJECTED</div>
-            </div>
-            <div class="trading-kpi-value">{projection:.1f}%</div>
-            {delta_html}
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        # Percent Leased
-        leased_display = f"{leased:.1f}%"
-        leased_trend = "+3.3% from last" if leased > 95 else "-3.3% from last"
-        leased_trend_class = "trend-positive" if leased > 95 else "trend-negative"
-        delta_html = f'<div class="trading-kpi-trend {leased_trend_class}">{leased_trend}</div>'
-        
-        st.markdown(f"""
-        <div class="trading-kpi-card trading-kpi-card-purple">
-            <div class="trading-kpi-header">
-                <div class="trading-kpi-label">% LEASED</div>
-            </div>
-            <div class="trading-kpi-value">{leased_display}</div>
-            {delta_html}
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        # Percent Occupied
-        occ_trend = "-3.3% from last" if occupied < 100 else "+3.3% from last"
-        occ_trend_class = "trend-negative" if occupied < 100 else "trend-positive"
-        delta_html = f'<div class="trading-kpi-trend {occ_trend_class}">{occ_trend}</div>'
-        
-        st.markdown(f"""
-        <div class="trading-kpi-card trading-kpi-card-blue">
-            <div class="trading-kpi-header">
-                <div class="trading-kpi-label">% OCCUPIED</div>
-            </div>
-            <div class="trading-kpi-value">{occupied:.1f}%</div>
-            {delta_html}
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col5:
-        # Collections Rate
-        collections_trend = "current period" if collections > 0 else "no data"
-        collections_trend_class = "trend-positive" if collections > 80 else "trend-negative"
-        delta_html = f'<div class="trading-kpi-trend {collections_trend_class}">{collections_trend}</div>'
-        
-        st.markdown(f"""
-        <div class="trading-kpi-card trading-kpi-card-black">
-            <div class="trading-kpi-header">
-                <div class="trading-kpi-label">COLLECTIONS RATE</div>
-            </div>
-            <div class="trading-kpi-value">{collections:.1f}%</div>
-            {delta_html}
         </div>
         """, unsafe_allow_html=True)

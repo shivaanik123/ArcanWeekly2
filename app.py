@@ -48,6 +48,31 @@ def main():
     .metric-label { color: #e2e8f0; font-size: 0.9rem; font-weight: 500; flex: 1; }
     .metric-value { color: #ffffff; font-size: 0.9rem; font-weight: 600; text-align: right; min-width: 60px; }
     
+    /* Move Schedule 4-column layout */
+    .move-schedule-4col-header, .move-schedule-4col-row { 
+        display: flex; 
+        align-items: center; 
+        padding: 12px 20px; 
+        border-bottom: 1px solid rgba(74, 144, 226, 0.15); 
+        min-height: 48px; 
+    }
+    .move-schedule-4col-header { 
+        background: rgba(74, 144, 226, 0.1); 
+        border-bottom: 2px solid rgba(74, 144, 226, 0.3); 
+        font-weight: 600; 
+    }
+    .move-schedule-4col-row:hover { background: rgba(74, 144, 226, 0.08); }
+    .move-col { 
+        flex: 1; 
+        color: #ffffff; 
+        font-size: 0.9rem; 
+        font-weight: 500; 
+        text-align: center; 
+    }
+    .move-col:first-child { text-align: left; color: #e2e8f0; }
+    .move-col:last-child { text-align: right; }
+    .move-schedule-4col-header .move-col { color: #e2e8f0; font-weight: 600; }
+    
     /* Property logo styling */
     .stImage > img { 
         border-radius: 8px !important; 

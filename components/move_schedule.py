@@ -19,17 +19,6 @@ def calculate_weekly_move_schedule(unit_availability_data: Dict[str, Any], total
     Returns:
         List of weekly move schedule data
     """
-    # Debug: Print what data we received
-    print(f"DEBUG: unit_availability_data keys: {list(unit_availability_data.keys()) if unit_availability_data else 'None'}")
-    
-    if 'data_sections' in unit_availability_data:
-        print(f"DEBUG: data_sections found! Keys: {list(unit_availability_data['data_sections'].keys())}")
-        for section_name, df in unit_availability_data['data_sections'].items():
-            if df is not None and not df.empty:
-                print(f"DEBUG: Section '{section_name}' has columns: {list(df.columns)}")
-                print(f"DEBUG: Section '{section_name}' has {len(df)} rows")
-    else:
-        print("DEBUG: No 'data_sections' found in unit_availability_data")
     # Get current date and find the Sunday of current week (week of ETL report)
     current_date = datetime.now()
     
@@ -55,7 +44,6 @@ def calculate_weekly_move_schedule(unit_availability_data: Dict[str, Any], total
     # total_units is the maximum capacity (96 for Marbella)
     # current_occupied is the actual occupied units right now
     running_occupied = current_occupied
-    print(f"DEBUG: Starting with {current_occupied} occupied units out of {total_units} total units")
     
     for week in range(6):
         week_start = current_sunday + timedelta(weeks=week)
@@ -68,8 +56,6 @@ def calculate_weekly_move_schedule(unit_availability_data: Dict[str, Any], total
         move_ins = 0
         move_outs = 0
         
-        # Debug: Track what we're processing
-        debug_moves = []
         
         # Process unit availability data if available
         if 'data_sections' in unit_availability_data:
@@ -83,9 +69,8 @@ def calculate_weekly_move_schedule(unit_availability_data: Dict[str, Any], total
                                     move_date = pd.to_datetime(row['Move In']).date()
                                     if week_start.date() <= move_date <= week_end.date():
                                         move_ins += 1
-                                        debug_moves.append(f"Move In: {move_date} in week {week_label}")
                                 except Exception as e:
-                                    debug_moves.append(f"Failed to parse Move In: {row['Move In']} - {str(e)}")
+                                    pass
                     
                     # Count Move Outs  
                     if 'Move Out' in df.columns:
@@ -95,13 +80,9 @@ def calculate_weekly_move_schedule(unit_availability_data: Dict[str, Any], total
                                     move_date = pd.to_datetime(row['Move Out']).date()
                                     if week_start.date() <= move_date <= week_end.date():
                                         move_outs += 1
-                                        debug_moves.append(f"Move Out: {move_date} in week {week_label}")
                                 except Exception as e:
-                                    debug_moves.append(f"Failed to parse Move Out: {row['Move Out']} - {str(e)}")
+                                    pass
         
-        # Debug: Print what we found for this week (only if we found moves)
-        if debug_moves:
-            print(f"Week {week_label} ({week_start.date()} to {week_end.date()}): {debug_moves}")
         
         # Calculate net change and update occupied units
         net_change = move_ins - move_outs
@@ -141,24 +122,27 @@ def render_move_schedule(unit_availability_data: Dict[str, Any], total_units: in
         <div class="dashboard-card-content">
     """, unsafe_allow_html=True)
     
-    # Generate table rows without header
-    table_rows = ""
+    # Create a proper 4-column table using a different approach
+    # First, add header
+    st.markdown("""
+    <div class="move-schedule-4col-header">
+        <div class="move-col">Date</div>
+        <div class="move-col">In</div>
+        <div class="move-col">Out</div>
+        <div class="move-col">Occupancy</div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Convert schedule data to metric format like other tables
-    metrics_data = []
+    # Then add data rows
     for item in schedule_data:
-        metrics_data.append(f"{item['Week']}: {item['Move Ins']} in, {item['Move Outs']} out, {item['Units']} units ({item['Occupancy']})")
-    
-    for i, metric_text in enumerate(metrics_data):
-        week = schedule_data[i]['Week']
-        table_rows += f"""
-        <div class="metric-row">
-            <span class="metric-label">{week}</span>
-            <span class="metric-value">{schedule_data[i]['Move Ins']}/{schedule_data[i]['Move Outs']}/{schedule_data[i]['Occupancy']}</span>
+        st.markdown(f"""
+        <div class="move-schedule-4col-row">
+            <div class="move-col">{item['Week']}</div>
+            <div class="move-col">{item['Move Ins']}</div>
+            <div class="move-col">{item['Move Outs']}</div>
+            <div class="move-col">{item['Occupancy']}</div>
         </div>
-        """
-    
-    st.markdown(table_rows, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     # Add footer
     st.markdown("""
