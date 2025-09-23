@@ -186,120 +186,98 @@ def calculate_net_to_rent(box_metrics: Dict[str, float], unit_counts: Dict[str, 
 
 def calculate_collections_rate(delinquency_data: Dict[str, Any], box_metrics: Dict[str, float], budget_data: Dict[str, Any] = None) -> float:
     """
-    Simple collections rate calculation for weekly dashboard updates.
+    Calculate collections rate for weekly dashboard.
     Formula: Collections Rate = (Charges - 0-30 Day Delinquency) / Charges * 100
-    Where Charges = Total Income - Bad Debt - Write Off (from Budget Comparison)
+    Where Charges = Total Income - Write Off (from Budget Comparison)
     """
-    # Try new calculation if we have budget data
-    if budget_data and 'budget_data' in budget_data:
-        try:
-            # Get charges from Budget Comparison using raw file for accuracy
-            charges = get_charges_from_budget_raw_file(budget_data)
-            if charges is None:
-                charges = 0.0
-                
-            # Get 0-30 delinquency from Delinquency Summary
-            delinquency_0_30 = get_0_30_delinquency_from_data(delinquency_data)
-            if delinquency_0_30 is None:
-                delinquency_0_30 = 0.0
-            
-            # Calculate collections rate
-            if charges > 0:
-                collected = charges - delinquency_0_30
-                collections_rate = (collected / charges) * 100
-                return max(0, min(100, collections_rate))
-        except Exception as e:
-            print(f"Error in collections calculation: {e}")
-    
-    # Fallback calculation using delinquency data only
-    if ('delinquency_data' not in delinquency_data or
-        delinquency_data['delinquency_data'] is None or
-        delinquency_data['delinquency_data'].empty):
+    if not budget_data or 'budget_data' not in budget_data:
+        return 0.0
+        
+    try:
+        # Get total income and write-offs from budget
+        total_income = get_total_income_from_budget(budget_data)
+        write_off = get_write_off_from_budget(budget_data)
+        
+        # Get 0-30 day delinquency
+        delinquency_0_30 = get_0_30_delinquency_from_data(delinquency_data)
+        
+        if total_income <= 0 or delinquency_0_30 is None:
+            return 0.0
+        
+        # Calculate collections rate
+        charges = total_income - write_off
+        collected = charges - delinquency_0_30
+        collections_rate = (collected / charges) * 100 if charges > 0 else 0.0
+        
+        return max(0, min(100, collections_rate))
+        
+    except Exception as e:
+        print(f"Error calculating collections rate: {e}")
         return 0.0
 
-    df = delinquency_data['delinquency_data']
-    
-    # Calculate total amount due vs collected
-    if 'Total Amount Due' in df.columns and 'Total Amount Collected' in df.columns:
-        total_due = df['Total Amount Due'].sum()
-        total_collected = df['Total Amount Collected'].sum()
-        
-        if total_due > 0:
-            collections_rate = (total_collected / total_due) * 100
-            return max(0, min(100, collections_rate))
-    
-    return 0.0
 
-
-def get_charges_from_budget_raw_file(budget_data: Dict[str, Any]) -> float:
-    """Read budget charges directly from the raw Excel file for accurate values"""
+def get_total_income_from_budget(budget_data: Dict[str, Any]) -> float:
+    """Extract TOTAL INCOME from Budget Comparison data"""
     try:
-        # For weekly dashboard updates, we'll use a simple hardcoded approach
-        # based on the known values from our analysis. This ensures accuracy.
+        if not budget_data or 'budget_data' not in budget_data:
+            return 0.0
+            
+        df = budget_data['budget_data']
+        if df is None or df.empty:
+            return 0.0
         
-        # We know from our analysis that for Marbella 08_04_2025:
-        # - Total Income: 131868.01
-        # - Bad Debt: 0 (not found)
-        # - Write Off: 0 (found but value was 0)
-        
-        # This is the simplest solution for the weekly dashboard workflow
-        total_income = 131868.01
-        bad_debt = 0.0
-        write_off = 0.0
-        
-        charges = total_income - bad_debt - write_off
-        print(f"Simple hardcoded extraction: Total Income={total_income}, Bad Debt={bad_debt}, Write Off={write_off}, Charges={charges}")
-        return max(0, charges)
-        
-    except Exception as e:
-        print(f"Error reading raw budget file: {e}")
-        return None
-
-
-def get_charges_from_budget_data(budget_df: pd.DataFrame) -> float:
-    """Extract charges by reading raw budget file directly for weekly dashboard updates"""
-    try:
-        # For the weekly dashboard, we'll use a simple approach:
-        # Read the parsed DataFrame but if values seem wrong, try to get from metadata
-        
-        # First try the parsed approach 
-        total_income = 0.0
-        bad_debt = 0.0
-        write_off = 0.0
-        
-        if 'Description' in budget_df.columns and 'MTD Actual' in budget_df.columns:
-            # Search through the description column for our target entries
-            for index, row in budget_df.iterrows():
+        # Look for "total income" in Description column
+        if 'Description' in df.columns:
+            for index, row in df.iterrows():
                 description = str(row['Description']).lower().strip()
-                mtd_actual = row.get('MTD Actual', 0)
                 
-                # Convert MTD Actual to float
-                try:
-                    mtd_value = float(mtd_actual) if pd.notna(mtd_actual) and str(mtd_actual).strip() != '' else 0.0
-                except (ValueError, TypeError):
-                    mtd_value = 0.0
-                
-                # Look for the specific account types (case insensitive, flexible matching)
-                if 'total income' in description:
-                    total_income = mtd_value
-                elif 'bad debt' in description and 'rent' in description:
-                    bad_debt = mtd_value
-                elif 'write off rent' in description:
-                    # If write off is negative, we ADD it (convert negative to positive)
-                    write_off = abs(mtd_value) if mtd_value < 0 else mtd_value
+                if description == 'total income':
+                    # Get value from Column D (index 3)
+                    try:
+                        value = float(row.iloc[3])  # Column D
+                        if value > 0:  # Should be positive
+                            return abs(value)
+                    except (ValueError, TypeError, IndexError):
+                        pass
         
-        # Simple check: if total income seems too low (like 49999 instead of 131868), 
-        # this indicates a parser issue for this specific case
-        if total_income > 0 and total_income < 100000:
-            print(f"Warning: Total Income seems low ({total_income}), may be parser issue")
-        
-        # Calculate charges: Total Income - Bad Debt - Write Off  
-        charges = total_income - bad_debt - write_off
-        return max(0, charges)
+        return 0.0
         
     except Exception as e:
-        print(f"Error extracting charges from budget data: {e}")
-        return None
+        print(f"Error extracting total income: {e}")
+        return 0.0
+
+
+def get_write_off_from_budget(budget_data: Dict[str, Any]) -> float:
+    """Extract write-off amount from Budget Comparison data"""
+    try:
+        if not budget_data or 'budget_data' not in budget_data:
+            return 0.0
+            
+        df = budget_data['budget_data']
+        if df is None or df.empty:
+            return 0.0
+        
+        # Look for "write off" in Description column
+        if 'Description' in df.columns:
+            for index, row in df.iterrows():
+                description = str(row['Description']).lower().strip()
+                
+                if 'write off' in description and 'rent' in description:
+                    # Get value from Column D (index 3)
+                    try:
+                        value = float(row.iloc[3])  # Column D
+                        if value != 0:  # Should be non-zero
+                            # If negative, we add it (subtract negative = add positive)
+                            # If positive, we subtract it normally
+                            return abs(value)  # Always return positive for subtraction in charges calculation
+                    except (ValueError, TypeError, IndexError):
+                        pass
+        
+        return 0.0
+        
+    except Exception as e:
+        print(f"Error extracting write-off: {e}")
+        return 0.0
 
 
 def get_0_30_delinquency_from_data(delinquency_data: Dict[str, Any]) -> float:
@@ -308,42 +286,25 @@ def get_0_30_delinquency_from_data(delinquency_data: Dict[str, Any]) -> float:
         if ('delinquency_data' not in delinquency_data or 
             delinquency_data['delinquency_data'] is None or 
             delinquency_data['delinquency_data'].empty):
-            return None
+            return 0.0
         
         df = delinquency_data['delinquency_data']
         
-        # Look for Grand Total row and 0-30 column
-        grand_total_row = None
-        col_0_30 = None
-        
-        # Find Grand Total row
+        # Find Grand Total row and 0-30 column
         for index, row in df.iterrows():
             if 'Grand Total' in str(row.iloc[0]):
-                grand_total_row = index
-                break
+                # Find 0-30 column
+                for col in df.columns:
+                    if '0-30' in str(col):
+                        delinquency_0_30 = df.loc[index, col]
+                        return max(0, float(delinquency_0_30 or 0))
         
-        # Find 0-30 column (could be '0-30', '0-30 Owed', etc.)
-        col_0_30 = None
-        for col in df.columns:
-            if '0-30' in str(col):
-                col_0_30 = col
-                break
-        
-        if grand_total_row is not None and col_0_30 is not None:
-            delinquency_0_30 = df.loc[grand_total_row, col_0_30]
-            return max(0, float(delinquency_0_30 or 0))
-        
-        return None
+        return 0.0
         
     except Exception as e:
         print(f"Error extracting 0-30 delinquency: {e}")
-        return None
+        return 0.0
 
-# Removed - collections calculation simplified for weekly updates
-
-# Removed - collections calculation simplified for weekly updates
-
-# Removed - collections calculation simplified for weekly updates
 
 def get_residents_on_notice_metrics(residents_data: Dict[str, Any]) -> Dict[str, int]:
     """Extract metrics from Residents on Notice data."""
