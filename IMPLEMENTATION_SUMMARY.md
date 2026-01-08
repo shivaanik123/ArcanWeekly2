@@ -13,10 +13,8 @@ Your dashboard now **automatically builds historical data** from weekly uploads.
    - Extracts metrics from individual Yardi reports
    - Auto-updates when you upload files
 
-2. **`utils/upload_handler.py`** (modified)
-   - Single property/week uploads only (no bulk upload)
-   - Automatic historical data update after uploads
-   - Simplified interface for data accuracy
+2. **`components/sidebar.py`** (modified)
+   - Removed upload interface (upload directly to S3)
 
 3. **`app.py`** (modified)
    - Loads historical data from centralized S3 location
@@ -51,30 +49,30 @@ Your dashboard now **automatically builds historical data** from weekly uploads.
 - Data could get out of sync
 
 ### After
-- Upload for one property and one week at a time (data accuracy)
-- Upload individual Yardi reports (Box Score, Work Orders, etc.)
-- System auto-extracts metrics and updates centralized database
+- Upload files directly to S3 at `data/MM_DD_YYYY/PropertyName/`
+- Run script to process new uploads
+- System auto-extracts metrics and updates historical data
 - Location: `s3://bucket/data/historical/{property}/historical_data.json`
-- Graphs always show complete history
+- Dashboard graphs show complete history
 
 ## Quick Start
 
 ### Step 1: Migrate Existing Data
 ```bash
-# Preview what will be migrated
-python scripts/migrate_from_weekly_reports.py --dry-run
-
-# Migrate all properties
 python scripts/migrate_from_weekly_reports.py
 ```
 
-### Step 2: Verify in Dashboard
-- Open dashboard → Select property → Check graphs
-- Should see historical occupancy trends
+### Step 2: Upload New Files to S3
+Upload weekly reports to: `s3://bucket/data/MM_DD_YYYY/PropertyName/`
 
-### Step 3: Test Automatic Updates
-- Upload new weekly reports via dashboard
-- Graphs should automatically show new data point
+### Step 3: Process Uploads
+```bash
+python scripts/process_new_uploads.py 01_15_2025 Marbella
+# Or process all: python scripts/process_new_uploads.py --all
+```
+
+### Step 4: Verify Dashboard
+Open dashboard → Graphs show updated historical data
 
 ## What Gets Extracted
 
@@ -102,9 +100,9 @@ From your weekly Yardi reports:
 ## Testing
 
 1. Run migration script
-2. Open dashboard and check graphs
-3. Upload new reports
-4. Verify graphs update automatically
+2. Upload files to S3 (direct upload)
+3. Run process_new_uploads.py
+4. Open dashboard and verify graphs updated
 
 ## Branch
 
