@@ -245,95 +245,64 @@ def main():
         render_move_schedule(unit_availability_data, total_property_units, current_occupied)
     
     # 3. Historical Analytics & Graphs Section
-    # Load comprehensive report data for historical analysis
+    # Load centralized historical data from S3
     comprehensive_historical_data = None
     full_comprehensive_data = None
-    matching_report = None
-    debug_info = []
-    
+
     try:
-        print(f"🔍 COMPREHENSIVE: Looking for Weekly Report for '{selected_property}' in week '{selected_week}'")
-        
-        # Look for comprehensive report (Weekly Report) for this property in same week/property folder
+        print(f"🔍 HISTORICAL: Loading centralized historical data for '{selected_property}'")
+
         from utils.s3_service import S3DataService
+        from utils.historical_data_service import HistoricalDataService
+
         storage_service = S3DataService()
-        
-        # List all files in the current week/property folder
-        folder_path = f"{selected_week}/{selected_property}"
-        all_files = storage_service.list_files(folder_path)
-        
-        print(f"🔍 COMPREHENSIVE: All files in {folder_path}: {all_files}")
-        
-        # Filter for files containing "Weekly Report"
-        excel_files = [f for f in all_files if 'weekly report' in f.lower() and f.endswith('.xlsx') and not f.startswith('~$')]
-        
-        print(f"🔍 COMPREHENSIVE: Weekly Report files found: {excel_files}")
-        
-        # Use first Weekly Report file found
-        matching_report = None
-        if excel_files:
-            filename = excel_files[0]
-            matching_report = f"{selected_week}/{selected_property}/{filename}"
-            print(f"🔍 COMPREHENSIVE: Using Weekly Report: {filename}")
-            print(f"🔍 COMPREHENSIVE: Full S3 path: {matching_report}")
+        historical_service = HistoricalDataService(storage_service)
+
+        # Load centralized historical data
+        historical_data = historical_service.load_historical_data(selected_property)
+
+        if historical_data:
+            print(f"✅ HISTORICAL: Centralized historical data loaded successfully")
+
+            # Convert to format expected by render_graphs_section
+            comprehensive_historical_data = {
+                'weekly_occupancy_data': []
+            }
+
+            # Convert ISO date strings back to datetime objects and restructure for compatibility
+            for record in historical_data.get('weekly_occupancy_data', []):
+                # Convert date string to datetime if needed
+                from datetime import datetime
+                date_obj = datetime.fromisoformat(record['date']) if isinstance(record['date'], str) else record['date']
+
+                comprehensive_historical_data['weekly_occupancy_data'].append({
+                    'date': date_obj,
+                    'occupancy_percentage': record.get('occupancy_percentage', 0.0),
+                    'leased_percentage': record.get('leased_percentage', 0.0),
+                    'projected_percentage': record.get('projected_percentage', 0.0),
+                    'make_readies_count': record.get('make_readies_count', 0),
+                    'work_orders_count': record.get('work_orders_count', 0)
+                })
+
+            print(f"✅ HISTORICAL: Found {len(comprehensive_historical_data['weekly_occupancy_data'])} weeks of occupancy data")
+
+            # Create full comprehensive data structure for compatibility
+            full_comprehensive_data = {
+                'metadata': historical_data.get('metadata', {}),
+                'historical_data': comprehensive_historical_data
+            }
+
         else:
-            print(f"🔍 COMPREHENSIVE: No Weekly Report files found in {folder_path}")
-            print(f"🔍 COMPREHENSIVE: Files need to contain 'weekly report' (case insensitive)")
-        
-        if matching_report:
-            print(f"🔍 COMPREHENSIVE: Downloading and parsing: {matching_report}")
-            
-            # Download file from S3 to temp location preserving original filename
-            import tempfile, os
-            temp_dir = tempfile.mkdtemp()
-            original_filename = matching_report.split('/')[-1]  # Get just the filename
-            temp_file_path = os.path.join(temp_dir, original_filename)
-            
-            # Read file from S3 and write to temp file with original name
-            file_content = storage_service.read_file(matching_report)
-            print(f"🔍 COMPREHENSIVE: Downloaded {len(file_content)} bytes from S3")
-            print(f"🔍 COMPREHENSIVE: Temp file: {temp_file_path}")
-            
-            with open(temp_file_path, 'wb') as f:
-                f.write(file_content)
-            
-            # Now use the original parse_file() with preserved filename
-            from parsers.file_parser import parse_file
-            comprehensive_data = parse_file(temp_file_path)
-            
-            # Clean up temp directory
-            import shutil
-            shutil.rmtree(temp_dir)
-            
-            print(f"🔍 COMPREHENSIVE: Parse result type: {type(comprehensive_data)}")
-            if isinstance(comprehensive_data, dict):
-                print(f"🔍 COMPREHENSIVE: Parse result keys: {list(comprehensive_data.keys())}")
-                
-                if 'error' in comprehensive_data:
-                    print(f"❌ COMPREHENSIVE: Parse error: {comprehensive_data['error']}")
-                elif 'historical_data' in comprehensive_data:
-                    comprehensive_historical_data = comprehensive_data['historical_data']
-                    full_comprehensive_data = comprehensive_data
-                    print(f"✅ COMPREHENSIVE: Historical data loaded successfully")
-                    print(f"🔍 COMPREHENSIVE: Historical data keys: {list(comprehensive_historical_data.keys())}")
-                    if 'weekly_occupancy_data' in comprehensive_historical_data:
-                        print(f"✅ COMPREHENSIVE: Found {len(comprehensive_historical_data['weekly_occupancy_data'])} weeks of occupancy data")
-                    else:
-                        print(f"❌ COMPREHENSIVE: No 'weekly_occupancy_data' key found")
-                else:
-                    print(f"❌ COMPREHENSIVE: No 'historical_data' key in parsed data")
-            else:
-                print(f"❌ COMPREHENSIVE: Parse result is not a dictionary")
-        else:
-            print(f"❌ COMPREHENSIVE: No Weekly Report found for {selected_property}")
-                
+            print(f"❌ HISTORICAL: No centralized historical data found for {selected_property}")
+            print(f"ℹ️  HISTORICAL: Upload weekly reports to build historical data")
+
     except Exception as e:
-        print(f"❌ COMPREHENSIVE: Exception occurred: {str(e)}")
+        print(f"❌ HISTORICAL: Exception occurred: {str(e)}")
         import traceback
-        print(f"❌ COMPREHENSIVE: Traceback: {traceback.format_exc()}")
-    
-    print(f"🔍 COMPREHENSIVE: Final result - historical_data: {'Found' if comprehensive_historical_data else 'None'}")
-    
+        print(f"❌ HISTORICAL: Traceback: {traceback.format_exc()}")
+
+    print(f"🔍 HISTORICAL: Final result - historical_data: {'Found' if comprehensive_historical_data else 'None'}")
+
     render_graphs_section(comprehensive_historical_data, selected_property, full_comprehensive_data)
 
 if __name__ == "__main__":

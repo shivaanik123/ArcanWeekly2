@@ -5,16 +5,22 @@ import os
 import sys
 from datetime import datetime, date
 from typing import List, Dict, Any
+import logging
+import tempfile
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from utils.s3_service import get_storage_service
 from config.upload_config import get_upload_properties, validate_filename
+from utils.historical_data_service import HistoricalDataService
+
+logger = logging.getLogger(__name__)
 
 class EnhancedUploadHandler:
     """Upload handler for bulk processing"""
-    
+
     def __init__(self):
         self.storage_service = get_storage_service()
+        self.historical_service = HistoricalDataService(self.storage_service)
     
     def render_upload_interface(self):
         """Render bulk upload interface in sidebar"""
@@ -183,10 +189,25 @@ class EnhancedUploadHandler:
             # Complete progress
             progress_bar.progress(1.0)
             status_text.text("Upload complete!")
-        
+
         # Display results
         self._display_upload_results(upload_results)
-        
+
+        # Update historical data if upload was successful
+        if upload_results['success'] and not upload_results['errors']:
+            try:
+                status_text.text("Updating historical data...")
+                self._update_historical_data(
+                    property_name=selected_property,
+                    week_string=week_string,
+                    report_date=datetime.combine(selected_date, datetime.min.time())
+                )
+                logger.info(f"Historical data updated for {selected_property}")
+            except Exception as e:
+                logger.error(f"Error updating historical data: {e}")
+                # Don't fail the upload if historical update fails
+                st.sidebar.warning("Upload successful, but historical data update failed")
+
         # Auto-refresh if successful
         if upload_results['success'] and not upload_results['errors']:
             st.sidebar.success("Dashboard will refresh automatically...")
@@ -197,12 +218,45 @@ class EnhancedUploadHandler:
                 st.session_state.upload_complete = True
             st.session_state.last_upload_properties = [selected_property]
             st.rerun()
-        
+
         return upload_results
     
+    def _update_historical_data(self, property_name: str, week_string: str, report_date: datetime):
+        """
+        Update centralized historical data after successful upload
+
+        Args:
+            property_name: Name of the property
+            week_string: Week folder (e.g., "01_15_2025")
+            report_date: Date of the reports
+        """
+        from data.loader import load_property_data
+
+        try:
+            # Load and parse the uploaded files
+            logger.info(f"Loading data for {property_name} from week {week_string}")
+            parsed_data = load_property_data(week_string, property_name)
+
+            if parsed_data:
+                # Update historical data
+                success = self.historical_service.update_with_new_week_data(
+                    property_name=property_name,
+                    parsed_data=parsed_data,
+                    report_date=report_date
+                )
+
+                if success:
+                    logger.info(f"Successfully updated historical data for {property_name}")
+                else:
+                    logger.warning(f"Failed to update historical data for {property_name}")
+
+        except Exception as e:
+            logger.error(f"Error updating historical data for {property_name}: {e}")
+            raise
+
     def _display_upload_results(self, results: Dict[str, Any]):
         """Display upload results in sidebar"""
-        
+
         if results['success']:
             st.sidebar.success(f"Successfully uploaded {len(results['success'])} files")
             
