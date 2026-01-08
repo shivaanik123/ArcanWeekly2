@@ -1,10 +1,10 @@
 # Migration Scripts
 
-This directory contains scripts for migrating historical data to the centralized S3 storage.
+This directory contains scripts for migrating and importing historical data to the centralized S3 storage.
 
 ## Overview
 
-There are two migration approaches depending on your data:
+There are three approaches to populate historical data:
 
 ### Option 1: Migrate from Comprehensive Weekly Reports (RECOMMENDED)
 
@@ -65,6 +65,43 @@ python scripts/migrate_historical_data.py --verbose
 4. Builds historical data week by week
 5. Saves to centralized database
 
+### Option 3: Manual Import from Excel File
+
+**Script:** `import_historical_from_excel.py`
+
+**Use when:** You want to manually add or edit historical data
+
+**Advantage:** Complete control over data, useful for corrections or backfilling
+
+**Usage:**
+```bash
+# Step 1: Generate Excel template
+python scripts/import_historical_from_excel.py --generate-template historical_template.xlsx
+
+# Step 2: Fill in your data in the Excel file
+
+# Step 3: Preview import
+python scripts/import_historical_from_excel.py historical_template.xlsx "Marbella" --dry-run
+
+# Step 4: Import (merges with existing data)
+python scripts/import_historical_from_excel.py historical_template.xlsx "Marbella"
+
+# Replace all existing data (use with caution!)
+python scripts/import_historical_from_excel.py historical_template.xlsx "Marbella" --replace
+```
+
+**How it works:**
+1. Generate Excel template with required columns
+2. Fill in historical data (date, occupancy %, leased %, etc.)
+3. Import merges new data with existing data (or replaces if --replace flag used)
+4. Automatically deduplicates by date
+
+**Template columns:**
+- **Required:** date, occupancy_percentage, leased_percentage
+- **Optional:** total_units, occupied_units, vacant_units, work_orders_count, make_readies_count, collections_percentage, etc.
+- Date format: YYYY-MM-DD
+- Percentages: Enter as numbers (95.5 for 95.5%)
+
 ## Which Script Should I Use?
 
 ### Use `migrate_from_weekly_reports.py` if:
@@ -77,6 +114,13 @@ python scripts/migrate_historical_data.py --verbose
 - ✅ You only have individual Yardi reports (no comprehensive reports)
 - ✅ You want to build historical data from scratch
 - ✅ You have weeks of individual report uploads
+
+### Use `import_historical_from_excel.py` if:
+- ✅ You want to manually add specific historical data
+- ✅ You need to correct or update existing data
+- ✅ You have historical data from other sources (spreadsheets, databases, etc.)
+- ✅ You want to backfill missing weeks
+- ✅ You prefer working with Excel over automated scripts
 
 ## Before Running Migration
 

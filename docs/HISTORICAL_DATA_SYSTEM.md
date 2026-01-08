@@ -225,6 +225,44 @@ python scripts/migrate_historical_data.py --verbose
 2. Historical data will be automatically created
 3. Subsequent uploads will append to historical data
 
+### Manual Data Import via Excel
+You can manually add or update historical data using an Excel file:
+
+#### Step 1: Generate Template
+```bash
+python scripts/import_historical_from_excel.py --generate-template historical_template.xlsx
+```
+
+This creates an Excel file with:
+- Sample data showing the format
+- Instructions sheet explaining each column
+- All required and optional columns
+
+#### Step 2: Fill in Your Data
+Open the template and fill in the "Historical Data" sheet:
+- **Required columns:** date, occupancy_percentage, leased_percentage
+- **Optional columns:** All others (default to 0 if missing)
+- **Date format:** YYYY-MM-DD (e.g., 2024-01-15)
+- **Percentages:** Enter as numbers (95.5 for 95.5%)
+
+#### Step 3: Import the Data
+```bash
+# Preview import (recommended first)
+python scripts/import_historical_from_excel.py historical_template.xlsx "Marbella" --dry-run
+
+# Import and merge with existing data
+python scripts/import_historical_from_excel.py historical_template.xlsx "Marbella"
+
+# Replace all existing data (dangerous!)
+python scripts/import_historical_from_excel.py historical_template.xlsx "Marbella" --replace
+```
+
+**Use cases:**
+- Adding historical data from before you started using the system
+- Manually correcting specific data points
+- Bulk importing data from other sources
+- Backfilling missing weeks
+
 ### For Existing Properties (with Comprehensive Weekly Reports)
 If you have comprehensive weekly reports with embedded historical data:
 1. Run the weekly reports migration script:
