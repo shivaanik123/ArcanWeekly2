@@ -164,8 +164,43 @@ comprehensive_data = parse_file("Weekly Report.xlsx")
 historical_data = historical_service.load_historical_data(property_name)
 ```
 
-### 4. Migration Script (`scripts/migrate_historical_data.py`)
-Populates initial historical data from existing uploads:
+### 4. Migration Scripts
+
+Two migration scripts are available depending on your data:
+
+#### A. Migrate from Comprehensive Weekly Reports (`scripts/migrate_from_weekly_reports.py`)
+**Use this when:** You have comprehensive weekly reports with embedded historical data
+
+**Best for:** Quickly populating months of historical data from existing reports
+
+**How it works:**
+- Finds the most recent comprehensive weekly report for each property
+- Extracts all historical data from that report
+- Populates centralized database in one step
+
+```bash
+# Dry run to see what would be migrated
+python scripts/migrate_from_weekly_reports.py --dry-run
+
+# Migrate all properties using their most recent weekly report
+python scripts/migrate_from_weekly_reports.py
+
+# Migrate specific property
+python scripts/migrate_from_weekly_reports.py --property "Marbella"
+
+# Verbose output
+python scripts/migrate_from_weekly_reports.py --verbose
+```
+
+#### B. Migrate from Individual Yardi Reports (`scripts/migrate_historical_data.py`)
+**Use this when:** You only have individual Yardi reports (Box Score, Work Orders, etc.)
+
+**Best for:** Building historical data from weekly uploads over time
+
+**How it works:**
+- Processes each week/property combination
+- Extracts current week metrics from individual reports
+- Builds historical data week by week
 
 ```bash
 # Dry run to see what would be migrated
@@ -181,6 +216,8 @@ python scripts/migrate_historical_data.py --property "Marbella"
 python scripts/migrate_historical_data.py --verbose
 ```
 
+**Recommendation:** If you have comprehensive weekly reports, use script A for faster migration. If you only have individual Yardi reports, use script B.
+
 ## Usage Guide
 
 ### For New Properties
@@ -188,8 +225,23 @@ python scripts/migrate_historical_data.py --verbose
 2. Historical data will be automatically created
 3. Subsequent uploads will append to historical data
 
-### For Existing Properties
-1. Run migration script to populate initial historical data:
+### For Existing Properties (with Comprehensive Weekly Reports)
+If you have comprehensive weekly reports with embedded historical data:
+1. Run the weekly reports migration script:
+   ```bash
+   # Dry run to see what would be migrated
+   python scripts/migrate_from_weekly_reports.py --dry-run
+
+   # Migrate all properties using their most recent weekly report
+   python scripts/migrate_from_weekly_reports.py
+
+   # Migrate specific property
+   python scripts/migrate_from_weekly_reports.py --property "Marbella"
+   ```
+
+### For Existing Properties (with Individual Yardi Reports)
+If you only have individual Yardi reports uploaded:
+1. Run the week-by-week migration script:
    ```bash
    python scripts/migrate_historical_data.py
    ```
