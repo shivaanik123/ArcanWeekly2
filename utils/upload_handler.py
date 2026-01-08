@@ -1,4 +1,4 @@
-"""Bulk ETL Report Upload Handler with S3 support"""
+"""Weekly Report Upload Handler with S3 support"""
 
 import streamlit as st
 import os
@@ -6,7 +6,6 @@ import sys
 from datetime import datetime, date
 from typing import List, Dict, Any
 import logging
-import tempfile
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from utils.s3_service import get_storage_service
@@ -16,87 +15,70 @@ from utils.historical_data_service import HistoricalDataService
 logger = logging.getLogger(__name__)
 
 class EnhancedUploadHandler:
-    """Upload handler for bulk processing"""
+    """Upload handler for single property/week uploads"""
 
     def __init__(self):
         self.storage_service = get_storage_service()
         self.historical_service = HistoricalDataService(self.storage_service)
-    
+
     def render_upload_interface(self):
-        """Render bulk upload interface in sidebar"""
-        st.sidebar.header("Bulk Upload")
+        """Render upload interface in sidebar"""
+        st.sidebar.header("Upload Reports")
         selected_property = st.sidebar.selectbox(
-            "Select Property",
+            "Property",
             options=get_upload_properties(),
             index=None,
-            placeholder="Choose a property...",
-            help="Select the property for these reports"
+            placeholder="Choose property...",
+            help="One property at a time"
         )
-        
-        # Date selection
+
         selected_date = st.sidebar.date_input(
-            "Report Date",
+            "Week Date",
             value=datetime.now().date(),
-            help="Select the date/week this data represents"
+            help="Week ending date"
         )
-        
-        # File upload (only show if property is selected)
+
         uploaded_files = None
         if selected_property:
             uploaded_files = st.sidebar.file_uploader(
-                "Upload Reports",
+                "Excel Files",
                 type=['xlsx'],
                 accept_multiple_files=True,
-                help="Select multiple Excel files to upload"
+                help="Upload all reports for this week"
             )
         else:
-            st.sidebar.info("Please select a property first")
+            st.sidebar.info("Select property first")
         
         if uploaded_files and selected_property:
-            # Validate all files first (before any upload)
             validation_results = self.validate_uploaded_files(uploaded_files)
-            
+
             valid_count = len(validation_results['valid_files'])
             invalid_count = len(validation_results['invalid_files'])
-            
-            # Show validation results
+
             if valid_count > 0:
-                st.sidebar.success(f"{valid_count} valid files")
-                
-                with st.sidebar.expander(f"Valid Files ({valid_count})", expanded=True):
-                    for file_info in validation_results['valid_files']:
-                        st.write(f"**{file_info['filename']}**")
-                        st.write(f"Type: {file_info['report_type']}")
-            
+                st.sidebar.success(f"✓ {valid_count} valid file(s)")
+
             if invalid_count > 0:
-                st.sidebar.error(f"{invalid_count} invalid files")
-                
-                with st.sidebar.expander("Invalid Files", expanded=True):
-                    for file_info in validation_results['invalid_files']:
-                        st.write(f"**{file_info['filename']}**")
-                        st.write(file_info['error_message'])
-                        st.markdown("---")
-            
-            # Upload controls (only show if ALL files are valid)
+                st.sidebar.error(f"✗ {invalid_count} invalid file(s)")
+                for file_info in validation_results['invalid_files']:
+                    st.sidebar.caption(f"• {file_info['filename']}")
+
             if valid_count > 0 and invalid_count == 0:
-                st.sidebar.markdown("---")
-                
                 backup_existing = st.sidebar.checkbox(
-                    "Backup existing files",
+                    "Backup existing",
                     value=True,
-                    help="Create backups before replacing existing files"
+                    help="Backup before replacing"
                 )
-                
-                # Upload button
-                if st.sidebar.button("Upload Files", type="primary", use_container_width=True):
-                    self.process_simplified_upload(
+
+                if st.sidebar.button("Upload", type="primary", use_container_width=True):
+                    self.process_upload(
                         uploaded_files=uploaded_files,
                         selected_property=selected_property,
                         selected_date=selected_date,
                         backup_existing=backup_existing
                     )
             elif invalid_count > 0:
-                st.sidebar.warning("Fix invalid files before uploading")
+                st.sidebar.warning("Fix invalid files")
     
     def validate_uploaded_files(self, uploaded_files: List) -> Dict[str, Any]:
         """Validate uploaded files using simple pattern matching"""
@@ -122,19 +104,19 @@ class EnhancedUploadHandler:
         
         return results
     
-    def process_simplified_upload(self, uploaded_files: List, selected_property: str,
-                                 selected_date: date, backup_existing: bool = True) -> Dict[str, Any]:
+    def process_upload(self, uploaded_files: List, selected_property: str,
+                       selected_date: date, backup_existing: bool = True) -> Dict[str, Any]:
         """
-        Process simplified upload with user-selected property
-        
+        Process upload for single property and week
+
         Args:
-            uploaded_files: List of uploaded file objects from Streamlit
-            selected_property: User-selected property name
-            selected_date: Selected date for the reports
-            backup_existing: Whether to backup existing files
-        
+            uploaded_files: Uploaded file objects
+            selected_property: Property name
+            selected_date: Week date
+            backup_existing: Backup before replacing
+
         Returns:
-            Dictionary with upload results
+            Upload results dict
         """
         week_string = selected_date.strftime("%m_%d_%Y")
         
@@ -255,107 +237,20 @@ class EnhancedUploadHandler:
             raise
 
     def _display_upload_results(self, results: Dict[str, Any]):
-        """Display upload results in sidebar"""
-
+        """Display upload results"""
         if results['success']:
-            st.sidebar.success(f"Successfully uploaded {len(results['success'])} files")
-            
-            # Group by property for display
-            by_property = {}
-            for file_info in results['success']:
-                prop = file_info['property']
-                if prop not in by_property:
-                    by_property[prop] = []
-                by_property[prop].append(file_info)
-            
-            with st.sidebar.expander(f"Uploaded Files ({len(results['success'])})"): 
-                for prop, files in by_property.items():
-                    st.write(f"**{prop}** ({len(files)} files)")
-                    for file_info in files:
-                        # Just show filename and size - report type not needed
-                        size_kb = file_info['size'] / 1024
-                        st.write(f"  • `{file_info['filename']}` ({size_kb:.1f} KB)")
-        
+            st.sidebar.success(f"Uploaded {len(results['success'])} file(s)")
+
         if results['backups']:
-            st.sidebar.info(f"Created {len(results['backups'])} backups")
-        
+            st.sidebar.info(f"{len(results['backups'])} backup(s) created")
+
         if results['errors']:
-            st.sidebar.error(f"{len(results['errors'])} files failed")
-            with st.sidebar.expander("Error Details"):
-                for error in results['errors']:
-                    st.write(f"• {error}")
+            st.sidebar.error(f"{len(results['errors'])} failed")
+            for error in results['errors']:
+                st.sidebar.caption(f"• {error}")
 
 
-# Main interface function
 def render_upload_interface():
-    """
-    Main function to render the enhanced upload interface
-    This is the primary entry point for the upload system
-    """
+    """Render upload interface"""
     handler = EnhancedUploadHandler()
     handler.render_upload_interface()
-
-def get_upload_history(property_name: str = None, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Get recent upload history using storage service
-    """
-    history = []
-    storage_service = get_storage_service()
-    
-    try:
-        # Get all available weeks
-        weeks = storage_service.list_weeks()
-        
-        for week_folder in weeks:
-            try:
-                # Parse week date
-                week_date = datetime.strptime(week_folder, "%m_%d_%Y")
-                
-                # Get properties for this week
-                properties = storage_service.list_properties(week_folder)
-                
-                for prop_folder in properties:
-                    # Get files for this property/week
-                    files = storage_service.list_files(week_folder, prop_folder)
-                    
-                    if files:
-                        # For S3, we can't easily get modification times, so use current time
-                        # In a real implementation, you might store metadata or use S3 object timestamps
-                        latest_time = datetime.now()  # Simplified - could be enhanced with S3 object metadata
-                        
-                        history.append({
-                            'property_name': prop_folder,
-                            'week': week_folder,
-                            'week_date': week_date,
-                            'file_count': len(files),
-                            'last_upload': latest_time,
-                            'files': files
-                        })
-            except ValueError:
-                continue  # Skip invalid week folders
-        
-        # Sort by week date (newest first) since we can't get accurate upload times
-        history.sort(key=lambda x: x['week_date'], reverse=True)
-        
-        # Filter by property if specified
-        if property_name:
-            history = [h for h in history if property_name.lower() in h['property_name'].lower()]
-        
-        # Limit results
-        return history[:limit]
-        
-    except Exception as e:
-        print(f"Error getting upload history: {e}")
-        return []
-
-def cleanup_old_backups(days_old: int = 30) -> int:
-    """
-    Clean up old backup files - S3 versioning handles this automatically
-    """
-    # S3 versioning and lifecycle policies handle backup cleanup
-    # This function is kept for compatibility but does nothing in S3 mode
-    return 0
-
-# Usage example and backward compatibility
-if __name__ == "__main__":
-    render_upload_interface()
