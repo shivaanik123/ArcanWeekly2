@@ -14,8 +14,9 @@ Your dashboard now **automatically builds historical data** from weekly uploads.
    - Auto-updates when you upload files
 
 2. **`utils/upload_handler.py`** (modified)
-   - Added automatic historical data update after uploads
-   - Calls historical service when files uploaded successfully
+   - Single property/week uploads only (no bulk upload)
+   - Automatic historical data update after uploads
+   - Simplified interface for data accuracy
 
 3. **`app.py`** (modified)
    - Loads historical data from centralized S3 location
@@ -46,13 +47,14 @@ Your dashboard now **automatically builds historical data** from weekly uploads.
 
 ### Before
 - Weekly reports contained all historical data
-- Manual maintenance of comprehensive Excel files
+- Manual maintenance required
 - Data could get out of sync
 
 ### After
+- Upload for one property and one week at a time (data accuracy)
 - Upload individual Yardi reports (Box Score, Work Orders, etc.)
-- System automatically extracts current week data
-- Centralized database at `s3://bucket/data/historical/{property}/historical_data.json`
+- System auto-extracts metrics and updates centralized database
+- Location: `s3://bucket/data/historical/{property}/historical_data.json`
 - Graphs always show complete history
 
 ## Quick Start
