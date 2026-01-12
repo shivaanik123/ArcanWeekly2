@@ -184,27 +184,121 @@ def calculate_net_to_rent(box_metrics: Dict[str, float], unit_counts: Dict[str, 
         unit_counts.get('pre_leased', 0)
     )
 
-def calculate_collections_rate(delinquency_data: Dict[str, Any], box_metrics: Dict[str, float]) -> float:
-    """Calculate collections rate from delinquency data."""
+def extract_budget_line_item(budget_data: Dict[str, Any], line_item_name: str) -> float:
+    """
+    Extract a specific line item value from Budget Comparison data.
+
+    Args:
+        budget_data: Parsed Budget Comparison data
+        line_item_name: Name of the line item to search for (e.g., 'Total Income', 'Bad Debt')
+
+    Returns:
+        The MTD Actual or YTD Actual value for the line item, or 0.0 if not found
+    """
+    if 'budget_data' not in budget_data or budget_data['budget_data'].empty:
+        return 0.0
+
+    df = budget_data['budget_data']
+
+    # Search for the line item by name (case-insensitive, partial match)
+    for _, row in df.iterrows():
+        # Check both Column_0 and Column_1 for the line item name
+        col_0 = str(row.get('Column_0', '')).strip().lower()
+        col_1 = str(row.get('Column_1', '')).strip().lower()
+        search_term = line_item_name.lower()
+
+        if search_term in col_0 or search_term in col_1:
+            # Try to extract MTD Actual or YTD Actual
+            mtd_actual = row.get('MTD Actual', 0)
+            ytd_actual = row.get('YTD Actual', 0)
+
+            # Return MTD Actual if available, otherwise YTD Actual
+            try:
+                value = float(mtd_actual) if pd.notna(mtd_actual) and mtd_actual != '' else float(ytd_actual) if pd.notna(ytd_actual) else 0.0
+                return value
+            except (ValueError, TypeError):
+                continue
+
+    return 0.0
+
+
+def calculate_collections_rate(delinquency_data: Dict[str, Any], box_metrics: Dict[str, float],
+                               budget_comparison_data: Dict[str, Any] = None) -> float:
+    """
+    Calculate collections rate using the correct formula:
+
+    Step 1: Charges = Total Income - Bad Debt Rental Income - Write Off Rent
+            (from Budget Comparison report)
+
+    Step 2: Collected = Charges - 0-30 Day Delinquency
+            (from Delinquency report)
+
+    Step 3: % Collected = Collected / Charges
+
+    Args:
+        delinquency_data: Parsed delinquency report data
+        box_metrics: Box score metrics (for legacy compatibility)
+        budget_comparison_data: Parsed Budget Comparison report data
+
+    Returns:
+        Collections rate as a percentage (0-100)
+    """
+
+    # NEW FORMULA: Using Budget Comparison data
+    if budget_comparison_data and 'budget_data' in budget_comparison_data:
+        # Step 1: Extract financial data from Budget Comparison
+        total_income = extract_budget_line_item(budget_comparison_data, 'total income')
+        bad_debt = extract_budget_line_item(budget_comparison_data, 'bad debt')
+        write_off = extract_budget_line_item(budget_comparison_data, 'write off')
+
+        # Calculate Charges (note: write-offs are often negative, so we ADD them)
+        charges = total_income - bad_debt - write_off
+
+        # Step 2: Extract 0-30 Day Delinquency from delinquency report
+        delinquency_0_30 = 0.0
+        if 'delinquency_data' in delinquency_data and not delinquency_data['delinquency_data'].empty:
+            df = delinquency_data['delinquency_data']
+
+            # Look for 0-30 day delinquency column (various possible names)
+            possible_columns = ['0-30 Owed', '0-30', '0-30 Days', '0-30 Day', 'Current']
+
+            for col_name in possible_columns:
+                if col_name in df.columns:
+                    # Sum all rows for this column
+                    for _, row in df.iterrows():
+                        try:
+                            value = float(row.get(col_name, 0))
+                            delinquency_0_30 += value
+                        except (ValueError, TypeError):
+                            continue
+                    break
+
+        # Step 3: Calculate collections rate
+        if charges > 0:
+            collected = charges - delinquency_0_30
+            collections_rate = (collected / charges) * 100
+            return max(0, min(100, collections_rate))  # Cap between 0-100%
+
+    # FALLBACK: Old formula (if Budget Comparison data not available)
     if 'delinquency_data' not in delinquency_data or delinquency_data['delinquency_data'].empty:
         return 0.0
-    
+
     df = delinquency_data['delinquency_data']
-    
+
     # Get total charges and total owed
     total_charges = 0
     total_owed = 0
-    
+
     for _, row in df.iterrows():
         if 'Total Charges' in df.columns:
             total_charges += float(row.get('Total Charges', 0))
         if 'Total Owed' in df.columns:
             total_owed += float(row.get('Total Owed', 0))
-    
+
     if total_charges > 0:
         collections_rate = ((total_charges - total_owed) / total_charges) * 100
         return max(0, min(100, collections_rate))  # Cap between 0-100%
-    
+
     return 0.0
 
 def get_residents_on_notice_metrics(residents_data: Dict[str, Any]) -> Dict[str, int]:
