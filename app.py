@@ -107,7 +107,8 @@ def main():
         'resanalytics_unit_availability': 'resanalytics_unit_availability' in raw_data,
         'pending_make_ready': 'pending_make_ready' in raw_data,
         'resaranalytics_delinquency': 'resaranalytics_delinquency' in raw_data,
-        'residents_on_notice': 'residents_on_notice' in raw_data
+        'residents_on_notice': 'residents_on_notice' in raw_data,
+        'budget_comparison': 'budget_comparison' in raw_data
     }
     
 
@@ -198,10 +199,15 @@ def main():
         if make_ready_data is not None and not make_ready_data.empty:
             make_ready_count = len(make_ready_data)
     
-    # Calculate collections rate
+    # Calculate collections rate (using Budget Comparison + Delinquency data)
     collections_rate = 0.0
     if file_availability['resaranalytics_delinquency']:
-        collections_rate = calculate_collections_rate(raw_data['resaranalytics_delinquency'], box_metrics)
+        budget_comparison_data = raw_data.get('budget_comparison') if file_availability.get('budget_comparison') else None
+        collections_rate = calculate_collections_rate(
+            raw_data['resaranalytics_delinquency'],
+            box_metrics,
+            budget_comparison_data
+        )
     
     # Get traffic metrics
     traffic_metrics = get_traffic_metrics(raw_data.get('resanalytics_box_score', {}))
