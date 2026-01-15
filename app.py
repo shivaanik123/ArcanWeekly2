@@ -107,7 +107,8 @@ def main():
         'resanalytics_unit_availability': 'resanalytics_unit_availability' in raw_data,
         'pending_make_ready': 'pending_make_ready' in raw_data,
         'resaranalytics_delinquency': 'resaranalytics_delinquency' in raw_data,
-        'residents_on_notice': 'residents_on_notice' in raw_data
+        'residents_on_notice': 'residents_on_notice' in raw_data,
+        'projected_occupancy': 'projected_occupancy' in raw_data
     }
     
 
@@ -238,11 +239,10 @@ def main():
         render_maintenance(work_orders_count, make_ready_count)
     
     with col4:
-        # Pass raw unit availability data instead of processed move_metrics
-        unit_availability_data = raw_data.get('resanalytics_unit_availability', {})
-        current_occupied = box_metrics.get('occupied_units', 0)
-        total_property_units = box_metrics.get('total_units', 0)
-        render_move_schedule(unit_availability_data, total_property_units, current_occupied)
+        # Get Projected Occupancy data (6-week forecast)
+        # This report contains pre-calculated move ins/outs and projected occupancy
+        projected_occupancy_data = raw_data.get('projected_occupancy', {})
+        render_move_schedule(projected_occupancy_data)
     
     # 3. Historical Analytics & Graphs Section
     # Load comprehensive report data for historical analysis

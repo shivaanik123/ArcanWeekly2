@@ -56,6 +56,10 @@ REQUIRED_FILE_PATTERNS = {
         "pattern": "Residents_on_Notice_*.xlsx",
         "description": "Residents on notice report"
     },
+    "Projected Occupancy": {
+        "pattern": "Projected_Occupancy_*.xlsx",
+        "description": "6-week occupancy forecast (ETL report)"
+    },
     "Budget Comparison": {
         "pattern": "Budget_Comparison_*.xlsx",
         "description": "Budget vs actual comparison"

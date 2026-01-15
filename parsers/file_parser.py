@@ -70,6 +70,7 @@ try:
     from .residents_on_notice_parser import parse_residents_on_notice, identify_residents_on_notice_file
     from .comprehensive_internal_parser import parse_comprehensive_internal_report, identify_comprehensive_internal_file
     from .comprehensive_external_parser import parse_comprehensive_6sheet_report, identify_comprehensive_6sheet_file
+    from .projected_occupancy_parser import parse_projected_occupancy, identify_projected_occupancy_file
 except ImportError:
     # For running as main script
     from resanalytics_box_parser import parse_resanalytics_box_score, identify_resanalytics_box_file
@@ -83,6 +84,7 @@ except ImportError:
     from residents_on_notice_parser import parse_residents_on_notice, identify_residents_on_notice_file
     from comprehensive_internal_parser import parse_comprehensive_internal_report, identify_comprehensive_internal_file
     from parsers.comprehensive_external_parser import parse_comprehensive_6sheet_report, identify_comprehensive_6sheet_file
+    from projected_occupancy_parser import parse_projected_occupancy, identify_projected_occupancy_file
 
 
 # File type patterns and their corresponding parsers
@@ -140,6 +142,12 @@ FILE_PATTERNS = [
         'identifier': identify_residents_on_notice_file,
         'parser': parse_residents_on_notice,
         'description': 'Residents on Notice Report'
+    },
+    {
+        'pattern': 'projected_occupancy',
+        'identifier': identify_projected_occupancy_file,
+        'parser': parse_projected_occupancy,
+        'description': 'Projected Occupancy - 6 Week Forecast (ETL Report)'
     },
     {
         'pattern': 'comprehensive_6sheet',
