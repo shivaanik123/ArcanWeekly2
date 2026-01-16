@@ -43,7 +43,6 @@ def get_move_schedule_from_projected_occupancy(projected_occupancy_data: Dict[st
                 "Week": "01/11",
                 "Move Ins": 0,
                 "Move Outs": 2,
-                "Units": 106,
                 "Occupancy": "86%"
             },
             ...
@@ -72,7 +71,6 @@ def get_move_schedule_from_projected_occupancy(projected_occupancy_data: Dict[st
             "Week": date_str,
             "Move Ins": int(week['move_ins']),  # Pre-calculated in report
             "Move Outs": int(week['move_outs']),  # Pre-calculated in report
-            "Units": int(week['projected_occupancy']),  # Pre-calculated in report
             "Occupancy": f"{int(week['projected_occupancy_percent'])}%"  # Pre-calculated in report
         })
 
