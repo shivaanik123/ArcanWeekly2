@@ -61,8 +61,15 @@ def get_move_schedule_from_projected_occupancy(projected_occupancy_data: Dict[st
 
     for week in forecast:
         # Simple extraction - no calculations needed
+        # Format date as MM/DD (remove year if present)
+        date_str = week['date']
+        if '/' in date_str and len(date_str.split('/')) == 3:
+            # Format: MM/DD/YYYY -> MM/DD
+            parts = date_str.split('/')
+            date_str = f"{parts[0]}/{parts[1]}"
+
         schedule_data.append({
-            "Week": week['date'],  # Date from report (e.g., "01/11/2026")
+            "Week": date_str,
             "Move Ins": int(week['move_ins']),  # Pre-calculated in report
             "Move Outs": int(week['move_outs']),  # Pre-calculated in report
             "Units": int(week['projected_occupancy']),  # Pre-calculated in report
@@ -101,8 +108,20 @@ def render_move_schedule(projected_occupancy_data: Dict[str, Any]):
         </div>
         """, unsafe_allow_html=True)
     else:
-        # Display the 6 weeks - straightforward table rows
-        table_rows = ""
+        # Display table with column headers
+        table_html = """
+        <div style="margin: 10px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <th style="text-align: left; padding: 8px; color: rgba(255, 255, 255, 0.7); font-weight: 600;">Date</th>
+                        <th style="text-align: center; padding: 8px; color: rgba(255, 255, 255, 0.7); font-weight: 600;">In</th>
+                        <th style="text-align: center; padding: 8px; color: rgba(255, 255, 255, 0.7); font-weight: 600;">Out</th>
+                        <th style="text-align: right; padding: 8px; color: rgba(255, 255, 255, 0.7); font-weight: 600;">Occupancy</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
 
         for item in schedule_data:
             week = item['Week']
@@ -110,20 +129,27 @@ def render_move_schedule(projected_occupancy_data: Dict[str, Any]):
             move_outs = item['Move Outs']
             occupancy = item['Occupancy']
 
-            # Simple format: Week | Ins/Outs/Occupancy
-            table_rows += f"""
-            <div class="metric-row">
-                <span class="metric-label">{week}</span>
-                <span class="metric-value">{move_ins}/{move_outs}/{occupancy}</span>
-            </div>
+            table_html += f"""
+                    <tr>
+                        <td style="padding: 8px; color: rgba(255, 255, 255, 0.9);">{week}</td>
+                        <td style="text-align: center; padding: 8px; color: rgba(255, 255, 255, 0.9);">{move_ins}</td>
+                        <td style="text-align: center; padding: 8px; color: rgba(255, 255, 255, 0.9);">{move_outs}</td>
+                        <td style="text-align: right; padding: 8px; color: rgba(255, 255, 255, 0.9);">{occupancy}</td>
+                    </tr>
             """
 
-        st.markdown(table_rows, unsafe_allow_html=True)
+        table_html += """
+                </tbody>
+            </table>
+        </div>
+        """
+
+        st.markdown(table_html, unsafe_allow_html=True)
 
     # Footer
     st.markdown("""
         <div class="schedule-footer">
-            *6-week forecast from Projected Occupancy report
+            *6-week forecast from historical data
         </div>
         </div>
     </div>
