@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 sys.path.append(os.path.dirname(__file__))
-from data.loader import get_available_weeks_and_properties, load_property_data
+from data.loader import get_available_weeks_and_properties, load_property_data, load_previous_month_delinquency, parse_week_date
 from utils.calculations import (
     get_box_score_metrics, get_move_schedule, get_unit_counts,
     calculate_projection, calculate_net_to_rent, calculate_collections_rate,
@@ -108,8 +108,10 @@ def main():
         'pending_make_ready': 'pending_make_ready' in raw_data,
         'resaranalytics_delinquency': 'resaranalytics_delinquency' in raw_data,
         'residents_on_notice': 'residents_on_notice' in raw_data,
-        'projected_occupancy': 'projected_occupancy' in raw_data
+        'projected_occupancy': 'projected_occupancy' in raw_data,
+        'budget_comparison': 'budget_comparison' in raw_data
     }
+
     
 
     
@@ -199,10 +201,27 @@ def main():
         if make_ready_data is not None and not make_ready_data.empty:
             make_ready_count = len(make_ready_data)
     
-    # Calculate collections rate
+    # Calculate collections rate using new formula:
+    # Charges = Total Income - Bad Debt - Write Off
+    # Collected = Charges - Delinquency (0-30 or 31-60 based on date)
+    # Collections % = Collected / Charges * 100
     collections_rate = 0.0
-    if file_availability['resaranalytics_delinquency']:
-        collections_rate = calculate_collections_rate(raw_data['resaranalytics_delinquency'], box_metrics)
+    if file_availability['budget_comparison'] and file_availability['resaranalytics_delinquency']:
+        week_date = parse_week_date(selected_week)
+        if week_date:
+            # Load previous month delinquency if day <= 10
+            previous_month_delinquency = None
+            if week_date.day <= 10:
+                previous_month_delinquency = load_previous_month_delinquency(
+                    selected_week, selected_property
+                )
+
+            collections_rate = calculate_collections_rate(
+                budget_data=raw_data['budget_comparison'],
+                delinquency_data=raw_data['resaranalytics_delinquency'],
+                week_date=week_date,
+                previous_month_delinquency=previous_month_delinquency
+            )
     
     # Get traffic metrics
     traffic_metrics = get_traffic_metrics(raw_data.get('resanalytics_box_score', {}))

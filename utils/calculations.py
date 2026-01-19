@@ -184,28 +184,66 @@ def calculate_net_to_rent(box_metrics: Dict[str, float], unit_counts: Dict[str, 
         unit_counts.get('pre_leased', 0)
     )
 
-def calculate_collections_rate(delinquency_data: Dict[str, Any], box_metrics: Dict[str, float]) -> float:
-    """Calculate collections rate from delinquency data."""
-    if 'delinquency_data' not in delinquency_data or delinquency_data['delinquency_data'].empty:
+def calculate_collections_rate(
+    budget_data: Dict[str, Any],
+    delinquency_data: Dict[str, Any],
+    week_date: datetime,
+    previous_month_delinquency: Dict[str, Any] = None
+) -> float:
+    """
+    Calculate collections rate using:
+    Charges = Total Income - Bad Debt Income - Write Off Rent
+    Collected = Charges - Delinquency (0-30 or 31-60 based on date)
+    Collections % = Collected / Charges * 100
+
+    Args:
+        budget_data: Parsed budget comparison data with metadata containing
+                    total_income, bad_debt_rental_income, write_off_rent
+        delinquency_data: Current month's delinquency data with owed_0_30, owed_31_60
+        week_date: The date of the week being calculated
+        previous_month_delinquency: Previous month's delinquency data (needed for days 1-10)
+
+    Returns:
+        Collections rate as a percentage (0-100)
+    """
+    # Extract charges from budget comparison
+    budget_metadata = budget_data.get('metadata', {})
+    total_income = budget_metadata.get('total_income', 0)
+    bad_debt = budget_metadata.get('bad_debt_rental_income', 0)
+    write_off = budget_metadata.get('write_off_rent', 0)
+
+    # Calculate charges: Total Income - Bad Debt - Write Off
+    # Note: Write Off is typically negative (e.g., -42,079.50), so subtracting it adds to total
+    charges = total_income - bad_debt - write_off
+
+    if charges <= 0:
         return 0.0
-    
-    df = delinquency_data['delinquency_data']
-    
-    # Get total charges and total owed
-    total_charges = 0
-    total_owed = 0
-    
-    for _, row in df.iterrows():
-        if 'Total Charges' in df.columns:
-            total_charges += float(row.get('Total Charges', 0))
-        if 'Total Owed' in df.columns:
-            total_owed += float(row.get('Total Owed', 0))
-    
-    if total_charges > 0:
-        collections_rate = ((total_charges - total_owed) / total_charges) * 100
-        return max(0, min(100, collections_rate))  # Cap between 0-100%
-    
-    return 0.0
+
+    # Determine which delinquency bucket to use based on day of month
+    day_of_month = week_date.day
+
+    if day_of_month <= 10:
+        # Use 31-60 Owed from previous month
+        if previous_month_delinquency:
+            prev_metadata = previous_month_delinquency.get('metadata', {})
+            delinquency = prev_metadata.get('owed_31_60', 0)
+        else:
+            # FALLBACK: Use current month's 31-60 when previous month unavailable
+            current_metadata = delinquency_data.get('metadata', {})
+            delinquency = current_metadata.get('owed_31_60', 0)
+    else:
+        # Use 0-30 Owed from current month
+        current_metadata = delinquency_data.get('metadata', {})
+        delinquency = current_metadata.get('owed_0_30', 0)
+
+    # Calculate collected amount
+    collected = charges - delinquency
+
+    # Calculate collections percentage
+    collections_rate = (collected / charges) * 100
+
+    # Cap between 0-100%
+    return max(0, min(100, collections_rate))
 
 def get_residents_on_notice_metrics(residents_data: Dict[str, Any]) -> Dict[str, int]:
     """Extract metrics from Residents on Notice data."""
