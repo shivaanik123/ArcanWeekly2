@@ -221,13 +221,13 @@ def extract_externally_managed(file_path: str) -> dict:
                     'expenses': float(expenses) if pd.notna(expenses) else None
                 })
 
-            # Collections
-            if pd.notna(charges) or pd.notna(collections):
-                coll_pct = (float(collections) / float(charges) * 100) if pd.notna(charges) and pd.notna(collections) and float(charges) > 0 else None
+            # Collections - col 19 already contains percentage as decimal (0.90 = 90%)
+            if pd.notna(collections):
+                coll_pct = float(collections) * 100 if float(collections) <= 1 else float(collections)
                 result['collections'].append({
                     'date': date_str,
                     'charges': float(charges) if pd.notna(charges) else None,
-                    'collected': float(collections) if pd.notna(collections) else None,
+                    'collected': None,  # External format doesn't have collected amount
                     'collections_pct': coll_pct
                 })
         except:
