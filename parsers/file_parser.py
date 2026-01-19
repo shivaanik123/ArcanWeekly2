@@ -239,17 +239,17 @@ def parse_file(file_path: str) -> Dict[str, Any]:
 def parse_directory(directory_path: str, property_filter: Optional[str] = None) -> Dict[str, Any]:
     """
     Parse all Excel files in a directory.
-    
+
     Args:
         directory_path: Path to directory containing Excel files
         property_filter: Optional property code filter (e.g., 'marbla')
-        
+
     Returns:
         Dictionary with parsed results for each file
     """
     if not os.path.exists(directory_path):
         raise FileNotFoundError(f"Directory not found: {directory_path}")
-    
+
     results = {
         'directory': directory_path,
         'property_filter': property_filter,
@@ -258,13 +258,27 @@ def parse_directory(directory_path: str, property_filter: Optional[str] = None) 
         'errors': [],
         'summary': {}
     }
-    
+
     # Get all Excel files in the directory
     excel_files = [f for f in os.listdir(directory_path) if f.endswith('.xlsx')]
-    
+
     # Filter by property if specified
     if property_filter:
         excel_files = [f for f in excel_files if property_filter in f]
+
+    # Prefer _2 delinquency files over regular ones
+    # If both ResARAnalytics_Delinquency_Summary_XXX.xlsx and ResARAnalytics_Delinquency_Summary_XXX_2.xlsx exist,
+    # only include the _2 version
+    delinquency_files = [f for f in excel_files if 'resaranalytics_delinquency' in f.lower()]
+    delinquency_2_files = [f for f in delinquency_files if '_2.xlsx' in f.lower()]
+
+    if delinquency_2_files:
+        # Remove non-_2 delinquency files when _2 versions exist
+        for d2_file in delinquency_2_files:
+            # Find the corresponding regular file (without _2)
+            regular_file = d2_file.replace('_2.xlsx', '.xlsx')
+            if regular_file in excel_files:
+                excel_files.remove(regular_file)
     
     # Parse each file
     for filename in excel_files:
