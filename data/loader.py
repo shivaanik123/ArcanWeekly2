@@ -3,7 +3,8 @@
 import os
 import sys
 import tempfile
-from typing import Dict, Any, List
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from parsers.file_parser import parse_directory
@@ -97,5 +98,108 @@ def load_property_data(week: str, property_name: str) -> Dict[str, Any]:
         for filename, file_data in results['files_parsed'].items():
             parser_type = file_data['parser_type']
             organized_data['raw_data'][parser_type] = file_data
-        
+
         return organized_data
+
+
+def parse_week_date(week: str) -> Optional[datetime]:
+    """Parse week folder name to datetime."""
+    try:
+        # Try MM_DD_YY format first
+        return datetime.strptime(week, '%m_%d_%y')
+    except ValueError:
+        pass
+    try:
+        # Try MM_DD_YYYY format
+        return datetime.strptime(week, '%m_%d_%Y')
+    except ValueError:
+        return None
+
+
+def load_previous_month_delinquency(week: str, property_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Load delinquency data from the most recent week of the previous month.
+
+    Args:
+        week: Current week folder name (e.g., '01_05_26')
+        property_name: Property name to load data for
+
+    Returns:
+        Dictionary containing delinquency data or None if not found
+    """
+    from parsers.file_parser import parse_file
+
+    # Parse current week date
+    current_date = parse_week_date(week)
+    if not current_date:
+        return None
+
+    # Calculate previous month
+    if current_date.month == 1:
+        prev_month = 12
+        prev_year = current_date.year - 1
+    else:
+        prev_month = current_date.month - 1
+        prev_year = current_date.year
+
+    # Get all available weeks
+    storage_service = get_storage_service()
+    all_weeks = storage_service.list_weeks()
+
+    # Find weeks from previous month
+    prev_month_weeks = []
+    for w in all_weeks:
+        w_date = parse_week_date(w)
+        if w_date and w_date.month == prev_month and w_date.year == prev_year:
+            prev_month_weeks.append((w, w_date))
+
+    if not prev_month_weeks:
+        return None
+
+    # Sort by date descending to get most recent
+    prev_month_weeks.sort(key=lambda x: x[1], reverse=True)
+    most_recent_week = prev_month_weeks[0][0]
+
+    # List files in the previous month's week/property folder
+    folder_path = f"{most_recent_week}/{property_name}"
+    files = storage_service.list_files(folder_path)
+
+    # Look for _2 delinquency file first, then regular
+    delinquency_file = None
+    for f in files:
+        if 'resaranalytics_delinquency' in f.lower() and f.endswith('.xlsx'):
+            if '_2.xlsx' in f.lower():
+                delinquency_file = f
+                break
+            elif not delinquency_file:
+                delinquency_file = f
+
+    if not delinquency_file:
+        # Try with trailing space on property name
+        folder_path = f"{most_recent_week}/{property_name} "
+        files = storage_service.list_files(folder_path)
+        for f in files:
+            if 'resaranalytics_delinquency' in f.lower() and f.endswith('.xlsx'):
+                if '_2.xlsx' in f.lower():
+                    delinquency_file = f
+                    break
+                elif not delinquency_file:
+                    delinquency_file = f
+
+    if not delinquency_file:
+        return None
+
+    # Download and parse the file
+    file_s3_key = f"{folder_path}/{delinquency_file}"
+    file_data = storage_service.read_file(file_s3_key)
+
+    if not file_data:
+        return None
+
+    # Write to temp file and parse
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file_path = os.path.join(temp_dir, delinquency_file)
+        with open(temp_file_path, 'wb') as f:
+            f.write(file_data)
+
+        return parse_file(temp_file_path)
