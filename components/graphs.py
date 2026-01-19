@@ -1,6 +1,6 @@
 """
 Graphs section component for historical data visualization.
-Data loaded from Parquet files via LocalDataService.
+Data loaded from Parquet files via S3DataService (or LocalDataService for local dev).
 """
 
 import streamlit as st
@@ -13,17 +13,16 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from utils.local_data_service import LocalDataService
+from utils.s3_service import get_storage_service
 
 _data_service = None
 
 
 def get_data_service():
-    """Get or create the LocalDataService instance."""
+    """Get or create the data service instance (S3 or Local based on environment)."""
     global _data_service
     if _data_service is None:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        _data_service = LocalDataService(base_path=os.path.join(project_root, "bucket_copy"))
+        _data_service = get_storage_service()
     return _data_service
 
 

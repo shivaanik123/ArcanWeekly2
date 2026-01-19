@@ -10,6 +10,13 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
+# Try to import pandas for Parquet support
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
 
 class S3DataService:
     """S3-only service for file operations"""
@@ -17,6 +24,7 @@ class S3DataService:
     def __init__(self):
         self.bucket_name = os.environ.get("S3_BUCKET_NAME")
         self.s3_prefix = os.environ.get("S3_DATA_PREFIX", "data/")
+        self.historical_prefix = "historicaldata/"
         
         if not self.bucket_name:
             raise ValueError("S3_BUCKET_NAME environment variable is required")
@@ -180,7 +188,7 @@ class S3DataService:
     
     def get_storage_info(self) -> Dict[str, Any]:
         """Get information about current storage configuration"""
-        
+
         return {
             'type': 'S3',
             'bucket': self.bucket_name,
@@ -189,6 +197,155 @@ class S3DataService:
             'location': self.bucket_name,
             'connected': True
         }
+
+    # =========================================================================
+    # Historical Data Methods (Parquet)
+    # =========================================================================
+
+    def list_historical_properties(self) -> List[str]:
+        """List properties that have historical data in S3."""
+        try:
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=self.historical_prefix,
+                Delimiter='/'
+            )
+            properties = []
+            for prefix_info in response.get('CommonPrefixes', []):
+                prefix = prefix_info['Prefix']
+                property_name = prefix.replace(self.historical_prefix, '').rstrip('/')
+                if property_name and not property_name.startswith('.'):
+                    properties.append(property_name)
+            return sorted(properties)
+        except ClientError:
+            return []
+
+    def list_historical_years(self, property_name: str) -> List[str]:
+        """List years available for a property's historical data in S3."""
+        try:
+            prefix = f"{self.historical_prefix}{property_name}/"
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=prefix,
+                Delimiter='/'
+            )
+            years = []
+            for prefix_info in response.get('CommonPrefixes', []):
+                year_prefix = prefix_info['Prefix']
+                year = year_prefix.replace(prefix, '').rstrip('/')
+                if year.isdigit():
+                    years.append(year)
+            return sorted(years)
+        except ClientError:
+            return []
+
+    def read_historical_data(self, property_name: str, data_type: str,
+                            year: Optional[str] = None) -> Optional[Any]:
+        """Read historical data from Parquet files in S3.
+
+        Args:
+            property_name: Name of the property
+            data_type: Type of data ('occupancy', 'maintenance', 'financial')
+            year: Optional year filter. If None, reads all years.
+
+        Returns:
+            pandas DataFrame with the historical data, or None if not available
+        """
+        if not PANDAS_AVAILABLE:
+            print("Warning: pandas not available, cannot read Parquet files")
+            return None
+
+        if year:
+            # Read specific year
+            s3_key = f"{self.historical_prefix}{property_name}/{year}/{data_type}.parquet"
+            try:
+                response = self.s3_client.get_object(Bucket=self.bucket_name, Key=s3_key)
+                return pd.read_parquet(io.BytesIO(response['Body'].read()))
+            except ClientError:
+                return None
+        else:
+            # Read all years and concatenate
+            all_data = []
+            for yr in self.list_historical_years(property_name):
+                s3_key = f"{self.historical_prefix}{property_name}/{yr}/{data_type}.parquet"
+                try:
+                    response = self.s3_client.get_object(Bucket=self.bucket_name, Key=s3_key)
+                    df = pd.read_parquet(io.BytesIO(response['Body'].read()))
+                    all_data.append(df)
+                except ClientError:
+                    continue
+
+            if all_data:
+                return pd.concat(all_data, ignore_index=True)
+            return None
+
+    def get_historical_data_for_graphs(self, property_name: str) -> Dict[str, Any]:
+        """Get all historical data for a property formatted for graph rendering.
+
+        Returns a dictionary compatible with the existing graph rendering code.
+        """
+        result = {
+            'weekly_occupancy_data': [],
+            'financial_trends': {
+                'rent_data': []
+            }
+        }
+
+        if not PANDAS_AVAILABLE:
+            return result
+
+        # Read occupancy data
+        occ_df = self.read_historical_data(property_name, 'occupancy')
+        if occ_df is not None and not occ_df.empty:
+            for _, row in occ_df.iterrows():
+                entry = {
+                    'date': pd.to_datetime(row.get('date')),
+                    'occupancy_percentage': row.get('occupancy_pct', 0),
+                    'leased_percentage': row.get('leased_pct', row.get('occupancy_pct', 0)),
+                    'projected_percentage': row.get('projected_pct', row.get('occupancy_pct', 0)),
+                    'work_orders_count': 0,
+                    'make_readies_count': 0
+                }
+                result['weekly_occupancy_data'].append(entry)
+
+        # Read maintenance data and merge
+        maint_df = self.read_historical_data(property_name, 'maintenance')
+        if maint_df is not None and not maint_df.empty:
+            # Create lookup by date
+            maint_lookup = {}
+            for _, row in maint_df.iterrows():
+                date_str = str(row.get('date'))[:10]
+                maint_lookup[date_str] = {
+                    'work_orders': row.get('work_orders', 0),
+                    'make_readies': row.get('make_readies', 0)
+                }
+
+            # Merge with occupancy data
+            for entry in result['weekly_occupancy_data']:
+                date_str = entry['date'].strftime('%Y-%m-%d') if hasattr(entry['date'], 'strftime') else str(entry['date'])[:10]
+                if date_str in maint_lookup:
+                    entry['work_orders_count'] = maint_lookup[date_str]['work_orders']
+                    entry['make_readies_count'] = maint_lookup[date_str]['make_readies']
+
+        # Read financial data
+        fin_df = self.read_historical_data(property_name, 'financial')
+        if fin_df is not None and not fin_df.empty:
+            for _, row in fin_df.iterrows():
+                rent_entry = {
+                    'date': pd.to_datetime(row.get('date')),
+                    'market_rent': row.get('market_rent'),
+                    'occupied_rent': row.get('occupied_rent'),
+                    'revenue': row.get('revenue'),
+                    'expenses': row.get('expenses'),
+                    'collections': row.get('collections_pct')
+                }
+                result['financial_trends']['rent_data'].append(rent_entry)
+
+        # Sort by date
+        result['weekly_occupancy_data'].sort(key=lambda x: x['date'])
+        result['financial_trends']['rent_data'].sort(key=lambda x: x['date'])
+
+        return result
 
 
 def get_storage_service():
