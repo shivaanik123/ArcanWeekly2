@@ -267,20 +267,24 @@ def render_maintenance_chart(df: pd.DataFrame, property_name: str, time_period: 
         return
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=filtered_df['date'], y=filtered_df['work_orders_count'], name='Work Orders',
-        fill='tozeroy', fillcolor='rgba(29, 78, 216, 0.3)',
-        line={'color': '#1d4ed8', 'width': 2}, mode='lines',
+    fig.add_trace(go.Bar(
+        x=filtered_df['date'],
+        y=filtered_df['work_orders_count'],
+        name='Work Orders',
+        marker_color='#1d4ed8',
+        opacity=0.8,
         hovertemplate='<b>Work Orders</b><br>%{x}: %{y}<extra></extra>'
     ))
-    fig.add_trace(go.Scatter(
-        x=filtered_df['date'], y=filtered_df['make_readies_count'], name='Make Ready Units',
-        fill='tozeroy', fillcolor='rgba(96, 165, 250, 0.3)',
-        line={'color': '#60a5fa', 'width': 2}, mode='lines',
+    fig.add_trace(go.Bar(
+        x=filtered_df['date'],
+        y=filtered_df['make_readies_count'],
+        name='Make Ready Units',
+        marker_color='#60a5fa',
+        opacity=0.8,
         hovertemplate='<b>Make Ready</b><br>%{x}: %{y}<extra></extra>'
     ))
 
-    _apply_chart_layout(fig, "Date", "Maintenance Count")
+    _apply_chart_layout(fig, "Date", "Maintenance Count", barmode='group', show_legend=True)
     st.plotly_chart(fig, use_container_width=True)
 
 
