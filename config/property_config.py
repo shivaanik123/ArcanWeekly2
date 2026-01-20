@@ -136,14 +136,19 @@ def get_property_logo_path(property_key: str) -> str:
     """Get CDN URL for property logo."""
     if property_key not in PROPERTY_MAPPING:
         return None
-    
+
     # Get CDN URL from environment variable or use relative path for local development
     CDN_BASE_URL = os.environ.get('CDN_BASE_URL', './logos')
     logo_file = PROPERTY_MAPPING[property_key].get("logo_file")
-    
+
     if logo_file and logo_file is not None:
         return f"{CDN_BASE_URL}/Apartment Logos/{logo_file}"
     return None
+
+def get_arcan_logo_path() -> str:
+    """Get CDN URL for Arcan logo."""
+    CDN_BASE_URL = os.environ.get('CDN_BASE_URL', './logos')
+    return f"{CDN_BASE_URL}/arcan-logo.png"
 
 def get_all_properties() -> list:
     """Get list of all available properties."""

@@ -108,15 +108,40 @@ def render_kpi_cards(metrics: Dict[str, Any]):
     </style>
     """, unsafe_allow_html=True)
     
-    # Create 4 columns for KPI cards
-    col1, col2, col3, col4 = st.columns(4)
-    
+    # Create 5 columns for KPI cards
+    col1, col2, col3, col4, col5 = st.columns(5)
+
     with col1:
+        # Status card - determine color based on status
+        if status.upper() == 'GOOD':
+            status_class = "trading-kpi-card-status-good"
+            status_subtitle = "performing well"
+        elif status.upper() in ['WATCH', 'MONITOR']:
+            status_class = "trading-kpi-card-status-watch"
+            status_subtitle = "needs attention"
+        elif status.upper() in ['ALERT', 'BAD', 'CRITICAL']:
+            status_class = "trading-kpi-card-status-alert"
+            status_subtitle = "immediate action"
+        else:
+            status_class = "trading-kpi-card"
+            status_subtitle = "monitor"
+
+        st.markdown(f"""
+        <div class="trading-kpi-card {status_class}">
+            <div class="trading-kpi-header">
+                <div class="trading-kpi-label">STATUS</div>
+            </div>
+            <div class="trading-kpi-value">{status}</div>
+            <div class="status-subtitle">{status_subtitle}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
         # Projected percentage
         proj_trend = "-1.4% from last" if projection < 100 else "+1.4% from last"
         trend_class = "trend-negative" if projection < 100 else "trend-positive"
         delta_html = f'<div class="trading-kpi-trend {trend_class}">{proj_trend}</div>'
-        
+
         st.markdown(f"""
         <div class="trading-kpi-card trading-kpi-card-dark">
             <div class="trading-kpi-header">
@@ -126,14 +151,14 @@ def render_kpi_cards(metrics: Dict[str, Any]):
             {delta_html}
         </div>
         """, unsafe_allow_html=True)
-    
-    with col2:
+
+    with col3:
         # Percent Leased
         leased_display = f"{leased:.1f}%"
         leased_trend = "+3.3% from last" if leased > 95 else "-3.3% from last"
         leased_trend_class = "trend-positive" if leased > 95 else "trend-negative"
         delta_html = f'<div class="trading-kpi-trend {leased_trend_class}">{leased_trend}</div>'
-        
+
         st.markdown(f"""
         <div class="trading-kpi-card trading-kpi-card-purple">
             <div class="trading-kpi-header">
@@ -143,13 +168,13 @@ def render_kpi_cards(metrics: Dict[str, Any]):
             {delta_html}
         </div>
         """, unsafe_allow_html=True)
-    
-    with col3:
+
+    with col4:
         # Percent Occupied
         occ_trend = "-3.3% from last" if occupied < 100 else "+3.3% from last"
         occ_trend_class = "trend-negative" if occupied < 100 else "trend-positive"
         delta_html = f'<div class="trading-kpi-trend {occ_trend_class}">{occ_trend}</div>'
-        
+
         st.markdown(f"""
         <div class="trading-kpi-card trading-kpi-card-blue">
             <div class="trading-kpi-header">
@@ -159,14 +184,19 @@ def render_kpi_cards(metrics: Dict[str, Any]):
             {delta_html}
         </div>
         """, unsafe_allow_html=True)
-    
-    with col4:
+
+    with col5:
         # Collections Rate
+        collections_trend = "current period" if collections > 0 else "no data"
+        collections_trend_class = "trend-positive" if collections > 80 else "trend-negative"
+        delta_html = f'<div class="trading-kpi-trend {collections_trend_class}">{collections_trend}</div>'
+
         st.markdown(f"""
         <div class="trading-kpi-card trading-kpi-card-black">
             <div class="trading-kpi-header">
                 <div class="trading-kpi-label">COLLECTIONS RATE</div>
             </div>
             <div class="trading-kpi-value">{collections:.1f}%</div>
+            {delta_html}
         </div>
         """, unsafe_allow_html=True)

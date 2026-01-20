@@ -7,17 +7,22 @@ import os
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from utils.upload_handler import render_upload_interface
+from config.property_config import get_arcan_logo_path
 
 def render_sidebar(available_data: Dict[str, List[str]]) -> Tuple[Optional[str], Optional[str]]:
     """
     Render sidebar with week and property selection.
-    
+
     Returns:
         Tuple of (selected_week, selected_property)
     """
-    
-    # Arcan Capital title (logo removed for S3-only deployment)
-    st.sidebar.title("ARCAN CAPITAL")
+
+    # Arcan Capital logo and title
+    arcan_logo_url = get_arcan_logo_path()
+    if arcan_logo_url:
+        st.sidebar.image(arcan_logo_url, use_container_width=True)
+    else:
+        st.sidebar.title("ARCAN CAPITAL")
     st.sidebar.markdown("---")
     
     # Week selection - simplified

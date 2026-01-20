@@ -47,6 +47,24 @@ def main():
     .metric-row:hover:not(:first-child) { background: rgba(74, 144, 226, 0.08); }
     .metric-label { color: #e2e8f0; font-size: 0.9rem; font-weight: 500; flex: 1; }
     .metric-value { color: #ffffff; font-size: 0.9rem; font-weight: 600; text-align: right; min-width: 60px; }
+
+    /* Property logo styling */
+    .stImage > img {
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+        margin: 15px auto !important;
+        display: block !important;
+        max-height: 140px !important;
+        max-width: 220px !important;
+        object-fit: contain !important;
+    }
+    .stImage {
+        text-align: center !important;
+        margin-bottom: 30px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -67,13 +85,22 @@ def main():
     
 
     
-    # Main content area - show property logo or default title
+    # Main content area - show property logo centered
     if selected_property:
         # Map directory name to property key
         property_key = find_property_by_directory_name(selected_property)
-        # Use property name as title (logos removed for S3-only deployment)
         display_name = get_property_display_name(property_key)
-        st.title(f"{display_name} Dashboard")
+
+        # Try to show logo from CDN - centered
+        logo_url = get_property_logo_path(property_key)
+        if logo_url:
+            # Center the logo using columns
+            col1, col2, col3 = st.columns([2, 1, 2])
+            with col2:
+                st.image(logo_url, width=220, use_container_width=False)
+        else:
+            # Fallback to title if no logo
+            st.title(f"{display_name}")
     else:
         st.title("Real Estate Property Dashboard")
     
